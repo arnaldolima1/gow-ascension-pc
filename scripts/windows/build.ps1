@@ -36,7 +36,8 @@ if ($Configure -or -not (Test-Path (Join-Path $Build "build.ninja"))) {
         "-DASCENSION_SPU_XFLOAT_APPROX=$(& $onoff $Cfg.SPU_XFLOAT_APPROX)",
         "-DASCENSION_SPU_LS_HOOKS=$(& $onoff $Cfg.SPU_LS_HOOKS)",
         "-DASCENSION_RPCS3_RSX=$(& $onoff $Cfg.RPCS3_RSX)",
-        "-DASCENSION_RPCS3_BUILD=`"$($Cfg.GPU_BUILD_DIR)`""
+        "-DASCENSION_RPCS3_BUILD=`"$($Cfg.GPU_BUILD_DIR)`"",
+        "-DPS3RECOMP_RSX_VULKAN=$(& $onoff $Cfg.RSX_VULKAN)"
     ) -join " "
     $ConfLog = Join-Path $Logs "configure.log"
     Write-Host "configuring build\win (log: $ConfLog)"

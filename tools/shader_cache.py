@@ -1,5 +1,5 @@
 """The RPCS3 renderer's shader cache and its packs, from the command line
-(the launcher's Video page does the same; work/launcher/app/shaders.py).
+(the launcher's Video page does the same; work/launcher-tauri/src-tauri/src/shaders.rs).
 
   python tools/shader_cache.py stats              what the cache holds
   python tools/shader_cache.py export <name>      the cache as gamedata/shader_packs/<name>.zip

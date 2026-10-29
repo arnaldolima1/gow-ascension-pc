@@ -81,6 +81,12 @@ message(STATUS "Lifted sources:  ${RECOMP_SOURCE_COUNT} file(s)")
 # imported one arrives without SDL2, pthreads, the Metal frameworks or the
 # Winsock/XInput imports -- the link then fails on every platform for a
 # different reason. add_subdirectory hands all of that over with the target.
+# With RPCS3's RSX linked (ASCENSION_RPCS3_RSX, below), ps3kit's own Vulkan
+# renderer (PS3RECOMP_RSX_VULKAN, PS3_RSX=vulkan) translates shaders with that
+# build's glslang: one copy in the binary.
+if(ASCENSION_RPCS3_RSX AND ASCENSION_RPCS3_BUILD)
+    set(PS3RECOMP_GLSLANG_RPCS3_BUILD "${ASCENSION_RPCS3_BUILD}" CACHE PATH "" FORCE)
+endif()
 add_subdirectory("${PS3RECOMP_DIR}" "${CMAKE_BINARY_DIR}/ps3recomp_sdk"
                  EXCLUDE_FROM_ALL)
 

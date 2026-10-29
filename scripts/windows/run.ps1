@@ -22,6 +22,8 @@
 # -D3d12       : live draw D3D12 draws (RSX_LIVE_DRAW) in place of RPCS3's RSX, the
 #                default (PS3_RSX=rpcs3; the build needs RPCS3_RSX=1). -Rpcs3 is still
 #                taken and changes nothing.
+# -Vulkan      : ps3kit's own Vulkan renderer (PS3_RSX=vulkan; the build needs
+#                RSX_VULKAN=1 in .env). -VkFps logs its fps line every 5 s.
 # -NoShaderCache: no RPCS3 shader cache. By default the runs share the
 #                launcher's (gamedata\shader_cache, PS3_SHADER_CACHE): the shaders
 #                compiled before load behind a loading screen at the start.
@@ -45,6 +47,8 @@ param(
     [switch]$Level,
     [switch]$Rpcs3,                     # the default; kept for old command lines
     [switch]$D3d12,
+    [switch]$Vulkan,
+    [switch]$VkFps,
     [switch]$NoShaderCache,
     [int]$CaptureAt = 0,                # press F12 (frame capture into captures\) at this second
     [int]$ThreadCpuAt = 0,              # per-thread host CPU over 5 s from this second
@@ -105,6 +109,8 @@ if ($Env -is [string]) {
     $Env = $h
 } elseif (-not $Menu) { $Env = $Env.Clone() }
 # RPCS3's RSX for every run, not only -Menu/-Level ones, unless -D3d12.
+if ($Vulkan -and -not $Env.ContainsKey("PS3_RSX")) { $Env["PS3_RSX"] = "vulkan" }
+if ($VkFps -and -not $Env.ContainsKey("PS3RECOMP_VK_FPS")) { $Env["PS3RECOMP_VK_FPS"] = "1" }
 if (-not $D3d12 -and -not $Env.ContainsKey("PS3_RSX")) { $Env["PS3_RSX"] = "rpcs3" }
 if (-not $Env.ContainsKey("PS3_SHADER_CACHE")) {
     $Env["PS3_SHADER_CACHE"] = if ($NoShaderCache) { "0" } else { Join-Path $Root "gamedata\shader_cache" }

@@ -39,9 +39,9 @@ No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
 
 ## Playing
 
-The launcher installs the game from **your** disc and compiles it on your computer; it has no release yet (until then, build as below).
+The launcher installs the game from **your** disc and compiles it on your computer. It comes from the [releases](https://github.com/arnaldolima1/gow-ascension-pc/releases) as `AscensionLauncher_<version>_x64-setup.exe` and updates itself when a new version is out; it has no release yet (until then, build as below).
 
-<p align="center"><img src="images/launcher/home.en.jpg" alt="The Ascension launcher" width="760"></p>
+<p align="center"><img src="images/launcher/launcher-home.en.jpg" alt="The Ascension launcher" width="760"></p>
 
 PLAY opens the game in its own window (on Windows, optionally inside the launcher's).
 
@@ -52,9 +52,9 @@ PLAY opens the game in its own window (on Windows, optionally inside the launche
 - **Game:** language (English, Portuguese, Spanish, French, German, Italian, Russian, Polish, Turkish) and subtitles, which hold after the first start too; automatic save backups.
 - **Mods:** turn them on and off, and order them. **Skip intro** comes with it (straight to the loading screen, no intro screens); **Create PT-BR mod** builds Brazilian Portuguese from your US disc image. The included mods are recipes the launcher applies to your own disc's files; none carries anything from the game.
 
-<p align="center"><img src="images/launcher/controls.en.jpg" alt="The controls page" width="760"></p>
+<p align="center"><img src="images/launcher/launcher-controls.en.jpg" alt="The controls page" width="760"></p>
 
-<p align="center"><img src="images/launcher/mods.en.jpg" alt="The mods page" width="760"></p>
+<p align="center"><img src="images/launcher/launcher-mods.en.jpg" alt="The mods page" width="760"></p>
 
 ## Building
 
