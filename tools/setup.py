@@ -99,6 +99,29 @@ def run(cmd, env=None, cwd=None):
         raise Fail(f'{os.path.basename(cmd[0])} {cmd[1] if len(cmd) > 1 else ""} exited with {p.returncode}')
 
 
+def drop_appledouble():
+    """macOS on a disk without extended attributes (exFAT, FAT): every file written gets a "._<name>" AppleDouble
+    beside it (the com.apple.provenance attribute), and the build's globs take ._cellAudio.c for C. Removed here,
+    by their header (00 05 16 07), never by name alone. Returns how many."""
+    if not MAC:
+        return 0
+    n = 0
+    for top in ('ps3kit', 'src', 'meta', 'host', 'tools', 'input', 'deps', 'mods-builtin', 'launcher'):
+        for d, _, fs in os.walk(path(top)):
+            for f in fs:
+                if f.startswith('._'):
+                    p = os.path.join(d, f)
+                    try:
+                        with open(p, 'rb') as h:
+                            magic = h.read(4)
+                        if magic == b'\x00\x05\x16\x07':
+                            os.remove(p)
+                            n += 1
+                    except OSError:
+                        pass
+    return n
+
+
 def find_ps3kit(given):
     for d in ([given] if given else []) + [path('ps3kit'), os.path.join(os.path.dirname(ROOT), 'ps3kit')]:
         if d and os.path.isfile(os.path.join(d, 'tools', 'ppu_lifter.py')):
@@ -291,6 +314,11 @@ def copy_runtime_dlls(env, build):
 def step_compile(a, kit):
     env = build_env()
     build = path('build', PLATFORM)
+    # a build.ninja made while AppleDouble files were there names them: configure again without them
+    ninja = os.path.join(build, 'build.ninja')
+    if os.path.isfile(ninja) and '/._' in open(ninja, encoding='utf-8', errors='replace').read():
+        print('  the build named AppleDouble files: configuring again', flush=True)
+        step_configure(a, kit)
     run([tool(env, 'ninja'), '-C', build, '-j', str(a.jobs)], env=env)
     exe = os.path.join(build, EXE)
     if not os.path.isfile(exe):
@@ -387,6 +415,9 @@ def main():
         for i, s in enumerate(steps, 1):
             print(f'[{i}/{len(steps)}] {s}', flush=True)
             t0 = time.time()
+            dropped = drop_appledouble()
+            if dropped:
+                print(f'  {dropped} AppleDouble files (._*) removed', flush=True)
             stamp = inputs(s, a, kit)
             folder = path(*STAMP_DIR[s]) if s in STAMP_DIR else None
             if folder and stamp and not a.force and stamp_ok(folder, stamp):
