@@ -43,13 +43,14 @@ Ainda não há release. Os marcos estão em [docs/MILESTONES.md](docs/MILESTONES
 
 ## Jogando
 
-Com o jogo compilado (abaixo), abra o launcher, `launcher\AscensionLauncher.exe`:
+O launcher instala o jogo a partir do **seu** disco e compila na sua máquina; ainda não há release dele (enquanto isso, compile como abaixo).
 
 <p align="center"><img src="docs/images/launcher/home.pt.jpg" alt="O launcher do Ascension" width="760"></p>
 
-JOGAR abre o jogo dentro da própria janela do launcher.
+JOGAR abre o jogo na janela dele (no Windows, opcionalmente dentro da janela do launcher).
 
-- **Vídeo:** renderizador (RPCS3 Vulkan ou OpenGL, live draw), resolução interna e filtro anisotrópico (RPCS3), janela ou tela cheia (F11 ou Alt+Enter também alternam durante o jogo), tamanho da janela, proporção, escala da imagem, sincronização vertical, contador de FPS.
+- **Instalação:** escolhe a pasta, a imagem `.iso` europeia e o seu arquivo de chaves (ou um `EBOOT.ELF` decriptado pelo RPCS3); o launcher confere o disco, decripta, traduz e compila o jogo, mostrando cada passo. A imagem continua onde está e é montada só para leitura ao jogar.
+- **Vídeo:** renderizador (RPCS3 Vulkan ou OpenGL), resolução interna, filtro anisotrópico, janela ou tela cheia (F11 ou Alt+Enter também alternam durante o jogo), tamanho da janela, proporção, escala da imagem, sincronização vertical, contador de FPS.
 - **Controles:** abas para teclado e mouse (duas teclas por comando, clique e aperte a nova) e para o controle (qual botão faz cada um, zona morta). Padrão: WASD anda, setas esquivam, Espaço/J/I/L ou o mouse nos botões, Shift defende, Esc ou Enter pausa. Teclado, mouse e controle funcionam juntos.
 - **Launcher** em vários idiomas; o automático segue o idioma do jogo.
 - **Jogo:** idioma (inglês, português, espanhol, francês, alemão, italiano, russo, polonês, turco) e legendas, que valem mesmo depois do primeiro uso; backup automático dos saves.

@@ -1,7 +1,12 @@
-# Launcher
+# Launcher assets
 
-`AscensionLauncher.exe` sets up the game (video, controls, language, mods, saves) and starts it; `AscensionLauncher.exe --play` starts the game with the saved settings and no window. It finds this repository by walking up from this folder, so it stays here.
+The launcher is released on its own (it installs the game from the player's disc and compiles it there); this folder
+keeps what the game itself reads from it.
 
-What it needs beside it is `Cinzel-Black.ttf` (the Cinzel typeface, SIL Open Font License, `OFL-Cinzel.txt`), which the game's own overlay also reads. The artwork and music are inside the `.exe`; files of the same names (`background*.jpg/png`, `logo.png`, `icon-2.png`, `music.mp3`) in `launcher\assets\` take their place.
+- `Cinzel-Black.ttf`: the Cinzel typeface (SIL Open Font License, `OFL-Cinzel.txt`), the font of the game's
+  performance overlay and shader loading screen (`host/ascension_defaults.cpp`; the launcher passes it too).
+- `assets/` (not in git): files named `background*.jpg/png`, `logo.png`, `icon-2.png` or `music.mp3` here replace the
+  launcher's own artwork and music.
 
-Settings are kept in `%APPDATA%\ascension-launcher\settings.json`.
+The launcher's settings are in `%APPDATA%\ascension-launcher\settings.json` (`~/Library/Application
+Support/ascension-launcher` on macOS, `~/.config/ascension-launcher` on Linux).

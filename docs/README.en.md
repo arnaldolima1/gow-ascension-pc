@@ -39,13 +39,14 @@ No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
 
 ## Playing
 
-With the game built (below), open the launcher, `launcher\AscensionLauncher.exe`:
+The launcher installs the game from **your** disc and compiles it on your computer; it has no release yet (until then, build as below).
 
 <p align="center"><img src="images/launcher/home.en.jpg" alt="The Ascension launcher" width="760"></p>
 
-PLAY starts the game inside the launcher's own window.
+PLAY opens the game in its own window (on Windows, optionally inside the launcher's).
 
-- **Video:** renderer (RPCS3 Vulkan or OpenGL, live draw), internal resolution and anisotropic filtering (RPCS3), window or full screen (F11 or Alt+Enter also toggle in game), window size, aspect ratio, image scaling, VSync, FPS counter.
+- **Installation:** choose the folder, the European `.iso` and your key file (or an `EBOOT.ELF` RPCS3 decrypted); the launcher checks the disc, decrypts, translates and compiles the game, showing each step. The image stays where it is and is mounted read-only when you play.
+- **Video:** renderer (RPCS3 Vulkan or OpenGL), internal resolution, anisotropic filtering, window or full screen (F11 or Alt+Enter also toggle in game), window size, aspect ratio, image scaling, VSync, FPS counter.
 - **Controls:** tabs for keyboard and mouse (two keys per control: click one and press the new key) and for the controller (which button does what, dead zone). Default: WASD walks, the arrows evade, Space/J/I/L or the mouse for the face buttons, Shift blocks, Esc or Enter pauses. Keyboard, mouse and controller all work at once.
 - **Launcher** in several languages; Automatic follows the game's language.
 - **Game:** language (English, Portuguese, Spanish, French, German, Italian, Russian, Polish, Turkish) and subtitles, which hold after the first start too; automatic save backups.
