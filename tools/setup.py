@@ -205,6 +205,9 @@ def msvc_env():
         raise Fail("Visual Studio's C++ tools are not installed (no vcvars64.bat)")
     out = subprocess.run(f'"{vcvars}" >nul && set', shell=True, capture_output=True, text=True).stdout
     env = dict(line.split('=', 1) for line in out.splitlines() if '=' in line)
+    # `set` keeps the parent's spelling: started from the launcher (Explorer's environment) it is Path, not PATH
+    for k in [k for k in env if k.upper() == 'PATH' and k != 'PATH']:
+        env['PATH'] = env.pop(k)
     llvm = os.path.join(vs, 'VC', 'Tools', 'Llvm', 'x64', 'bin')
     if os.path.isfile(os.path.join(llvm, 'clang-cl.exe')):
         env['PATH'] = llvm + os.pathsep + env.get('PATH', '')
