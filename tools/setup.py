@@ -191,7 +191,42 @@ def msvc_env():
 
 
 def build_env():
-    return msvc_env() if WINDOWS else dict(os.environ)
+    if WINDOWS:
+        return msvc_env()
+    env = dict(os.environ)
+    # an app opened from the Finder has only /usr/bin:/bin:...: Homebrew's cmake and ninja are not on it
+    extra = [d for d in ('/opt/homebrew/bin', '/usr/local/bin') if os.path.isdir(d)]
+    env['PATH'] = os.pathsep.join(extra + [env.get('PATH', '/usr/bin:/bin')])
+    return env
+
+
+def ram_gb():
+    """The host's memory in GB (0 when unknown)."""
+    try:
+        if WINDOWS:
+            import ctypes
+
+            class Status(ctypes.Structure):
+                _fields_ = [('len', ctypes.c_ulong), ('load', ctypes.c_ulong), ('total', ctypes.c_ulonglong),
+                            ('avail', ctypes.c_ulonglong), ('pt', ctypes.c_ulonglong), ('pa', ctypes.c_ulonglong),
+                            ('vt', ctypes.c_ulonglong), ('va', ctypes.c_ulonglong), ('ve', ctypes.c_ulonglong)]
+            st = Status()
+            st.len = ctypes.sizeof(Status)
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st))
+            return st.total / 2**30
+        if MAC:
+            return int(subprocess.run(['sysctl', '-n', 'hw.memsize'], capture_output=True, text=True).stdout) / 2**30
+        return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES') / 2**30
+    except (OSError, ValueError, AttributeError):
+        return 0
+
+
+def default_jobs():
+    """Parallel compiles: each lifted PPU unit takes 1-2 GB and more alongside it, so one per 8 GB of memory, at
+    most half the CPUs (a 16 GB Mac froze at six)."""
+    cpus = os.cpu_count() or 2
+    ram = ram_gb()
+    return max(1, min(cpus // 2, int(ram // 8) if ram else 2))
 
 
 def tool(env, name):
@@ -331,8 +366,8 @@ def main():
     ap.add_argument('--ps3kit', help='the toolkit (default: ps3kit/ here or beside)')
     ap.add_argument('--rsx', help="a built ps3rsx (default: deps/rsx)")
     ap.add_argument('--ffmpeg-include', help='the FFmpeg headers (default: deps/ffmpeg/include, then the system)')
-    ap.add_argument('--jobs', type=int, default=max(1, min(os.cpu_count() or 2, 8) // 2),
-                    help='parallel compiles (each lifted PPU unit takes 1-2 GB; default: half the CPUs, at most 4)')
+    ap.add_argument('--jobs', type=int, default=default_jobs(),
+                    help='parallel compiles (default: one per 8 GB of memory, at most half the CPUs)')
     ap.add_argument('--native', action='store_true', help='the lifted code for this CPU only (-march=native)')
     ap.add_argument('--hashes', metavar='OUT', help='write the generated files\' hashes and stop')
     ap.add_argument('--compare', metavar='REF', help='with --hashes: list what differs from another --hashes file')
