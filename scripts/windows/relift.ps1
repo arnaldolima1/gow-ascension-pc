@@ -28,6 +28,9 @@ if ($What -eq "ppu") {
         --toc 0x81EF60 --code-end 0x62C4CC --chunk-lines 150000 --reg-locals `
         --insn-switches (Join-Path $Root "tools\ppu_switches.json") `
         -o (Join-Path $Root "src\recomp") 2>&1 | Tee-Object $Log
+    # The 0x4396E0 read guard (lr 0x43D17C crash); needs ps3kit's Windows-only
+    # ppu_guest_ea_committed, so relift.sh does not apply it.
+    python (Join-Path $Root "tools\patch_43D17C_guard.py") (Join-Path $Root "src\recomp") 2>&1 | Tee-Object -Append $Log
 } elseif ($What -eq "jobmods") {
     # the launcher's installation cuts them out of the EBOOT.ELF into input\jobmods
     $mods = Join-Path $Root "input\jobmods"
