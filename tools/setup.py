@@ -275,11 +275,26 @@ def rsx_dir(given):
     return d if os.path.isfile(os.path.join(d, lib)) and os.path.isfile(os.path.join(d, 'build.ninja')) else None
 
 
+def cpu_avx2():
+    """Whether this CPU has AVX2 (and with it FMA3 and BMI2: every x86 CPU with AVX2 has them, Haswell and Zen
+    onwards). The game is compiled on the player's own machine, so its lifted code can use them."""
+    if WINDOWS:
+        import ctypes
+        return bool(ctypes.windll.kernel32.IsProcessorFeaturePresent(40))   # PF_AVX2_INSTRUCTIONS_AVAILABLE
+    if os.path.isfile('/proc/cpuinfo'):
+        flags = open('/proc/cpuinfo').read()
+        return all(f' {f}' in flags for f in ('avx2', 'fma', 'bmi2'))
+    return False   # macOS: arm64, or an Intel Mac left as it is
+
+
 def configure_args(a, kit):
     rsx = rsx_dir(a.rsx)
+    avx2 = 'ON' if cpu_avx2() else 'OFF'
     args = ['-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', f'-DPS3RECOMP_DIR={kit}', f'-DPython3_EXECUTABLE={sys.executable}',
             '-DPS3RECOMP_FFMPEG_RUNTIME=ON', f'-DPS3RECOMP_FFMPEG_INCLUDE_DIR={ffmpeg_include(a.ffmpeg_include)}',
-            f"-DASCENSION_NATIVE={'ON' if a.native else 'OFF'}"]
+            f"-DASCENSION_NATIVE={'ON' if a.native else 'OFF'}",
+            # the lifted PPU and SPU code for AVX2, BMI2 and FMA3 when this CPU has them (as the developers' .env)
+            f'-DASCENSION_PPU_AVX2={avx2}', f'-DASCENSION_SPU_AVX2={avx2}']
     if WINDOWS:
         args += ['-DCMAKE_C_COMPILER=clang-cl', '-DCMAKE_CXX_COMPILER=clang-cl']
     if MAC:
