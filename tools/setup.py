@@ -337,6 +337,10 @@ def step_compile(a, kit):
     if os.path.isfile(ninja) and '/._' in open(ninja, encoding='utf-8', errors='replace').read():
         print('  the build named AppleDouble files: configuring again', flush=True)
         step_configure(a, kit)
+    # the 0x4396E0 read guard (lr 0x43D17C crash) on the lifted PPU code, as relift.ps1 does after a lift: byte-level
+    # and idempotent, so it runs every time (the ppu step may have been skipped); Windows only, as its helper
+    if WINDOWS:
+        run([sys.executable, path('tools', 'patch_43D17C_guard.py'), path('src', 'recomp')])
     run([tool(env, 'ninja'), '-C', build, '-j', str(a.jobs)], env=env)
     exe = os.path.join(build, EXE)
     if not os.path.isfile(exe):
