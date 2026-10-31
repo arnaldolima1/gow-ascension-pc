@@ -91,7 +91,8 @@
 //                      right pc instead of unwinding past the interpreted
 //                      caller.
 //   LD_PERF_OVERLAY    frame rate, frame time, speed, CPU and GPU use in the
-//                      top-right corner of the window.
+//                      top-right corner of the window. Off by default here; the
+//                      launcher's "FPS counter" sets it to 1.
 //   PS3_VERBOSE=0      the per-frame log lines (task creation and joins, SPU
 //                      dispatch, viewport changes, events) stay quiet: every
 //                      guest thread writes them through one FILE lock, and
@@ -190,7 +191,11 @@ struct AscensionDefaults {
         // it against 48 without, one run each).
         set_default("SPU_REJOIN", "204:9700-1C000");
         set_default("SPU_REJOIN_CALL", "1");
-        set_default("LD_PERF_OVERLAY", "1");
+        // Off unless asked for: the launcher's "FPS counter" (LD_PERF_OVERLAY=1)
+        // still turns the corner panel on. The default is off because it is drawn
+        // over the game and a run started outside the launcher (a test .cmd) got it
+        // on screen without being asked.
+        set_default("LD_PERF_OVERLAY", "0");
         // RPCS3's performance overlay in the launcher's style: its Cinzel and
         // palette (text, panel, gold titles).
         set_default("PS3_OVERLAY_COLORS", "#E2B86AFF,#0B090899,#E2B86AFF,#00000000");

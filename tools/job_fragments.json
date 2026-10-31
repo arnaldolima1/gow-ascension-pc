@@ -35,7 +35,11 @@
  {
   "ea": "0x71cb70",
   "span": "0x1c60",
-  "seen": false
+  "seen": false,
+  "entries": [
+   "0x71d980",
+   "0x71d990"
+  ]
  },
  {
   "ea": "0x71e7d0",
@@ -60,7 +64,10 @@
  {
   "ea": "0x7200a0",
   "span": "0xba0",
-  "seen": false
+  "seen": false,
+  "entries": [
+   "0x7206b0"
+  ]
  },
  {
   "ea": "0x720c40",
@@ -70,7 +77,10 @@
  {
   "ea": "0x721090",
   "span": "0xe70",
-  "seen": false
+  "seen": false,
+  "entries": [
+   "0x721a80"
+  ]
  },
  {
   "ea": "0x721f00",
@@ -160,7 +170,10 @@
  {
   "ea": "0x729a40",
   "span": "0x3c0",
-  "seen": false
+  "seen": false,
+  "entries": [
+   "0x729cc0"
+  ]
  },
  {
   "ea": "0x729e00",
@@ -262,5 +275,30 @@
    "0x6aee44",
    "0x6aee70"
   ]
+ },
+ {
+  "ea": "0x71ba70",
+  "span": "0x8a0",
+  "seen": true
+ },
+ {
+  "ea": "0x721540",
+  "span": "0x540",
+  "seen": true
+ },
+ {
+  "ea": "0x724380",
+  "span": "0x480",
+  "seen": true
+ },
+ {
+  "ea": "0x7273a0",
+  "span": "0x360",
+  "seen": true
+ },
+ {
+  "ea": "0x7295e0",
+  "span": "0x1b0",
+  "seen": true
  }
 ]
