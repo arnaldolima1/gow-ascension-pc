@@ -168,6 +168,12 @@ struct AscensionDefaults {
         // lifted code stay in that core's caches. First level ~14.8 -> ~15.6
         // fps, module 218's job 72 -> 65 us.
         set_default("SPURS_PIN", "1");
+        // Alecto's arena: workload 13 (RenderJobs, ~9 SPU-ms a frame) off the
+        // four SPUs the EDGE list runs on, so it neither takes an EDGE slot nor
+        // shares those cores' caches. 46.6 -> 48.3/48.8 fps (two runs of 13-14
+        // gameplay windows each). Pinning anything else the same way loses:
+        // 13:4-5;3,8,9,10,14:4-5 -> 44.5, 13:4-5;11,12:4-5 -> 46.8.
+        set_default("SPURS_WID_LANES", "13:4-5");
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
