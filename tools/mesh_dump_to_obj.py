@@ -1,6 +1,6 @@
 """Turn GOWA_MESH_DUMP files (ps3kit gowa_drawcmd hooks.c) into Wavefront OBJ, to look at.
 
-    python3 tools/mesh_dump_to_obj.py <dump dir> [--min-tris 50] [--out <dir>] [--first N] [--last N] [--quiet]
+    python3 tools/mesh_dump_to_obj.py <dump dir> [--min-tris 50] [--out <dir>] [--first N] [--last N] [--latest N] [--quiet]
         [--box x0,y0,z0,x1,y1,z1] [--glb <file>]
 
 mesh_<n>.idx: u16 big-endian triangle-list indices; mesh_<n>.pos: x y z w
@@ -52,13 +52,17 @@ def main():
     ap.add_argument("dir"); ap.add_argument("--min-tris", type=int, default=50); ap.add_argument("--out")
     ap.add_argument("--first", type=int, default=0); ap.add_argument("--last", type=int, default=1 << 30)
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--latest", type=int, help="only the N newest meshes by file time (GOWA_MESH_DUMP is a ring)")
     ap.add_argument("--glb", help="also write the meshes of at least --min-tris triangles to this GLB, one node each")
     ap.add_argument("--box", help="keep only meshes inside x0,y0,z0,x1,y1,z1")
     a = ap.parse_args()
     src = pathlib.Path(a.dir); out = pathlib.Path(a.out or src / "obj"); out.mkdir(exist_ok=True)
     allv, allf, base, glb = [], [], 0, []
     box = [float(c) for c in a.box.split(",")] if a.box else None
-    for idx in sorted(src.glob("mesh_*.idx")):
+    files = sorted(src.glob("mesh_*.idx"))
+    if a.latest:
+        files = sorted(files, key=lambda f: f.with_suffix(".pos").stat().st_mtime_ns if f.with_suffix(".pos").exists() else 0)[-a.latest:]
+    for idx in files:
         n = int(idx.stem.split("_")[1])
         if n < a.first or n > a.last: continue
         pos = idx.with_suffix(".pos")
