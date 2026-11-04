@@ -1,0 +1,103 @@
+<!doctype html>
+<!-- Local GLB viewer for the 3D profile (ascension-online SPEC S9.3): opens a GLB from the
+     player's own disk (file picker or drag and drop), nothing is uploaded. One checkbox per node,
+     so the pieces of tools/mesh_dump_to_obj.py --glb can be told apart (S9.4). -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guerreiro 3D</title>
+<style>
+  :root { --bg: #15110e; --panel: #221b16; --text: #eadfce; --muted: #a8977f; --accent: #c8952e; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px system-ui, sans-serif; }
+  #app { display: flex; height: 100%; }
+  #side { width: 260px; padding: 12px; background: var(--panel); overflow: auto; box-sizing: border-box; }
+  #view { flex: 1; position: relative; }
+  #drop { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); pointer-events: none; }
+  h1 { font-size: 16px; margin: 0 0 10px; color: var(--accent); }
+  label { display: block; margin: 3px 0; cursor: pointer; }
+  .row { margin: 8px 0; }
+  button { background: var(--accent); color: #1a120a; border: 0; padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-right: 4px; }
+  #parts label { font-family: ui-monospace, monospace; font-size: 12px; }
+  @media (max-width: 640px) { #app { flex-direction: column; } #side { width: 100%; height: 40%; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="side">
+    <h1>Guerreiro 3D</h1>
+    <div class="row"><input type="file" id="file" accept=".glb,.gltf"></div>
+    <div class="row">
+      <label><input type="checkbox" id="wire"> Wireframe</label>
+      <button id="all">Todas</button><button id="none">Nenhuma</button>
+    </div>
+    <div id="info" class="row" style="color:var(--muted)"></div>
+    <div id="parts"></div>
+  </div>
+  <div id="view"><div id="drop">Escolha ou arraste um arquivo .glb</div></div>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const view = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15110e);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xfff1dd, 0x3a2a1c, 1.2));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(3, 5, 4); scene.add(sun);
+const material = new THREE.MeshStandardMaterial({ color: 0xc9a27a, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide });
+let model = null;
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+
+function show(buffer, name) {
+  new GLTFLoader().parse(buffer, "", (gltf) => {
+    if (model) scene.remove(model);
+    model = gltf.scene;
+    const parts = document.getElementById("parts"); parts.textContent = "";
+    let tris = 0;
+    model.traverse((o) => {
+      if (!o.isMesh) return;
+      o.geometry.computeVertexNormals();
+      o.material = material;
+      tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3;
+      const l = document.createElement("label"), c = document.createElement("input");
+      c.type = "checkbox"; c.checked = true; c.onchange = () => { o.visible = c.checked; };
+      l.append(c, " " + (o.name || "mesh")); parts.append(l);
+    });
+    scene.add(model);
+    const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    controls.target.copy(c);
+    camera.position.copy(c).add(new THREE.Vector3(0, size.y * 0.1, Math.max(size.x, size.y, size.z) * 2.2));
+    document.getElementById("info").textContent = `${name}: ${parts.children.length} peças, ${tris} triângulos`;
+    document.getElementById("drop").style.display = "none";
+  }, (e) => alert("GLB inválido: " + e.message));
+}
+function open(file) { file.arrayBuffer().then((b) => show(b, file.name)); }
+document.getElementById("file").onchange = (e) => e.target.files[0] && open(e.target.files[0]);
+view.ondragover = (e) => e.preventDefault();
+view.ondrop = (e) => { e.preventDefault(); e.dataTransfer.files[0] && open(e.dataTransfer.files[0]); };
+document.getElementById("wire").onchange = (e) => { material.wireframe = e.target.checked; };
+const setAll = (v) => document.querySelectorAll("#parts input").forEach((c) => { c.checked = v; c.onchange(); });
+document.getElementById("all").onclick = () => setAll(true);
+document.getElementById("none").onclick = () => setAll(false);
+</script>
+</body>
+</html>
