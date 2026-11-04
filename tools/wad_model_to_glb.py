@@ -1,7 +1,7 @@
 """A model straight from the player's own WAD (no game running): EDGE segments to GLB.
 
     python3 tools/wad_model_to_glb.py R_SPARTANAVS00.WAD --mg MG_70b97feb_0 --glb body.glb
-        [--ts R_SPARTANAVS00.TS] [--decaps] [--no-normals] [--list]
+        [--ts R_SPARTANAVS00.TS] [--decaps] [--no-normals] [--pose JOBCAP] [--list]
 
 For the 3D profile (ascension-online docs/ONLINE.md, S9). Read 2026-11-04 against the RSX and SPU
 job captures (RSX_DRAW_DUMP, SPU_JOBCAP); the files come from the player's disc and stay on that PC.
@@ -124,9 +124,14 @@ def uv_stream(mg, c):
     return best
 
 
-def pieces(mg, tag):
-    out, used = [], {}
-    for g in segments(mg):
+def pieces(mg, tag, pose_dir=None):
+    out, used, segs = [], {}, segments(mg)
+    pose = None
+    if pose_dir:
+        import lobby_pose
+        pose = lobby_pose.Pose(pose_dir, mg, segs)
+    rigid = []
+    for g in segs:
         # The segments of one part share its texcoord stream, one after the other.
         uv = uv_stream(mg, g["c"])
         if uv:
@@ -146,7 +151,16 @@ def pieces(mg, tag):
         UV = [struct.unpack_from(">2f", mg, uv[0] + uv[1] * i) for i in range(nv)] if uv else None
         T = [t for t in T if max(t) < nv]
         if T:
+            if pose:
+                posed = pose.skin(g, P)
+                if posed is None:
+                    rigid.append(len(out))
+                else:
+                    P = posed
             out.append(("%s_%05X" % (tag, g["c"]), P, UV, T, g["mat"]))
+    for i in rigid:   # after every skinned piece: they borrow its matrices
+        n, P, UV, T, mat = out[i]
+        out[i] = (n, pose.rigid(P), UV, T, mat)
     return out
 
 
@@ -209,6 +223,7 @@ def main():
     ap.add_argument("--mg", action="append", help="mesh group block name (repeat); default: every MG_ block")
     ap.add_argument("--glb")
     ap.add_argument("--ts", help="the .TS beside the WAD (textures' large levels)")
+    ap.add_argument("--pose", help="an SPU_JOBCAP dir: the pose the game had there (tools/lobby_pose.py); default the bind pose")
     ap.add_argument("--no-normals", action="store_true", help="colour maps only")
     ap.add_argument("--decaps", action="store_true", help="keep the decapitation caps (hidden in game until a cut)")
     ap.add_argument("--tex", type=int, default=1024)
@@ -230,7 +245,7 @@ def main():
         if n not in names or not s:
             continue
         mats = model_materials(blocks, n)
-        for name, P, UV, T, slot in pieces(d, n):
+        for name, P, UV, T, slot in pieces(d, n, a.pose):
             mat = mats[slot] if slot is not None and slot < len(mats) else None
             # Decapitation caps are drawn only when a limb or the head comes off.
             if mat and "decaps" in mat and not a.decaps:
