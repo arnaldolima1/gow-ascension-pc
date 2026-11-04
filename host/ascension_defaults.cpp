@@ -193,6 +193,9 @@ struct AscensionDefaults {
         // 80.1 -> 71.7 ms, the RSX thread 0.90 -> 0.37 cores; 16 threads: the
         // same (2026-11-03, ps3kit docs/ASCENSION_PLAN.md).
         set_default("PS3_RSX_IDLE_WAIT", "1");
+        // Esc closed the window mid-game on the Mac (the process kept running
+        // with no window); the game has its own pause menu
+        set_default("PS3_ESC_QUITS", "0");
         // A SPURS worker takes its next workload itself instead of waking the
         // coordinator: in-run A/B, first level, frame -0.38 ms (16 threads) and
         // -1.48 ms (4 cores / 8 threads), no hang (2026-11-03).
