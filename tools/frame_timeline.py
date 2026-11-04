@@ -14,6 +14,9 @@ RsxSync workload (wid 18), MeshProc (wid 14), the EDGE lists (wid 15-17), and th
 video picture taken (VDEC_TIMELOG). --show prints the raw events of that many
 frames too. With SPURS_WID_TIMELOG=<us> it also prints, per workload, the SPU
 time its policy-module runs took in a frame and when they started and ended.
+With RSX_FIFO_TIMELOG=<from s>[:<for s>] (ps3kit gpu/bridge) it keeps the frames
+inside that window and splits the RSX thread's time between the EDGE passes
+into waits (FIFO empty, semaphore, report hold, ZCULL sync, flip) and drawing.
 """
 import argparse
 import bisect
@@ -37,6 +40,9 @@ def parse(path):
         m = re.search(r"\[rsx-report\] t=(\d+)us ea=0x(\w+) awaited=(\d)", l)
         if m:
             ev.append((int(m.group(1)), "G", (int(m.group(2), 16), int(m.group(3))))); continue
+        m = re.search(r"\[rsx-fifo\] t=(\d+)us (\w+) a=0x(\w+) b=0x(\w+) d=(\d+)us", l)
+        if m:
+            ev.append((int(m.group(1)), "F", (m.group(2), int(m.group(3), 16), int(m.group(4), 16), int(m.group(5))))); continue
         m = re.search(r"\[vdec-time\] t=(\d+)us", l)
         if m:
             ev.append((int(m.group(1)), "V", ())); continue
@@ -82,6 +88,40 @@ def edge_passes(seg, s, wruns):
             out["last report -> pass 2"] = (p2s - g[-1]) / 1000
     if long_end:
         out["last long SPU run end"] = rel(max(long_end))
+    if p2:
+        out.update(rsx_split(seg, p1e, p2s, g[0] if p2 and g else None))
+    return out
+
+
+# RSX_FIFO_TIMELOG: each wait is logged at its end with its length; "run" ends an idle FIFO
+FIFO_WAITS = {"run": "idle (FIFO empty)", "sema": "semaphore acquire", "hold": "report hold",
+              "zsync": "ZCULL sync", "flip": "flip"}
+
+
+def rsx_split(seg, a, b, first_report):
+    """What the RSX thread did between EDGE pass 1's end (a) and pass 2's start
+    (b), and before the first awaited report in the gap: ms in each
+    wait, the rest is drawing. Also when the put first moved after pass 1."""
+    f = [x for x in seg if x[1] == "F"]
+    if not f:
+        return {}
+    out = {}
+    spans = [("gap", a, b)]
+    if first_report:
+        spans.append(("before 1st awaited report", a, first_report))
+    for name, lo, hi in spans:
+        if hi <= lo:
+            continue
+        used = 0
+        for k, label in FIFO_WAITS.items():
+            ms = sum(max(0, min(hi, x[0]) - max(lo, x[0] - x[2][3])) for x in f if x[2][0] == k) / 1000
+            used += ms
+            out[f"RSX {name}: {label}"] = ms
+        out[f"RSX {name}: drawing"] = max(0.0, (hi - lo) / 1000 - used)
+    puts = [x[0] for x in f if x[2][0] == "put" and x[0] >= a]
+    if puts:
+        out["put moves, first after pass 1"] = (puts[0] - a) / 1000
+    out["put moves in the gap"] = sum(1 for x in f if x[2][0] == "put" and a <= x[0] < b)
     return out
 
 
@@ -95,6 +135,9 @@ def main():
     a = ap.parse_args()
     ev = parse(a.log)
     starts = [e[0] for e in ev if e[1] == "P" and e[2][0] == 0x99AAA0]
+    fifo = [e[0] for e in ev if e[1] == "F"]
+    if fifo:   # RSX_FIFO_TIMELOG logs a window: keep the frames inside it
+        starts = [t for t in starts if fifo[0] <= t <= fifo[-1]]
     if len(starts) < 3:
         raise SystemExit("no frame starts (PPU writes to 0x99AAA0) in the log: see the usage for the variables")
     if a.end_us:
@@ -157,10 +200,11 @@ def main():
                 print(f"  {rel(x):7.2f} {kind} {x[2] if x[1] != 'S' else ('wid', x[2][0], 'lr', x[2][1])}")
     print(f"{len(rows)} frames; ms from the frame's start (median, and in how many frames it happened):")
     keys = list(dict.fromkeys(k for r in rows for k in r))
+    w = max(24, *(len(k) for k in keys))
     for k in keys:
         v = [r[k] for r in rows if r.get(k) is not None]
         if v:
-            print(f"  {k:24} {statistics.median(v):7.1f}   ({len(v)}/{len(rows)})")
+            print(f"  {k:{w}} {statistics.median(v):7.1f}   ({len(v)}/{len(rows)})")
     if wids:
         print("workload runs per frame (SPURS_WID_TIMELOG; median ms: SPU time, first start, last end):")
         for w in sorted(wids, key=lambda w: -statistics.median([p[0] for p in wids[w]])):
