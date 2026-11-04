@@ -16,6 +16,7 @@ frames too. With SPURS_WID_TIMELOG=<us> it also prints, per workload, the SPU
 time its policy-module runs took in a frame and when they started and ended.
 """
 import argparse
+import bisect
 import collections
 import re
 import statistics
@@ -33,6 +34,9 @@ def parse(path):
         m = re.search(r"\[GET_REPORT\] t=(\d+)us type=(\d+) off=0x(\w+)", l)
         if m:
             ev.append((int(m.group(1)), "R", (int(m.group(2)), int(m.group(3), 16)))); continue
+        m = re.search(r"\[rsx-report\] t=(\d+)us ea=0x(\w+) awaited=(\d)", l)
+        if m:
+            ev.append((int(m.group(1)), "G", (int(m.group(2), 16), int(m.group(3))))); continue
         m = re.search(r"\[vdec-time\] t=(\d+)us", l)
         if m:
             ev.append((int(m.group(1)), "V", ())); continue
@@ -46,6 +50,41 @@ def parse(path):
     return ev
 
 
+def edge_passes(seg, s, wruns):
+    """The EDGE list of the frame (wid 15-17, one per frame in turn) runs in two
+    passes of long runs, the second released by RsxSync. Their spans, the gap
+    between them, how idle the SPUs were in that gap, and the RSX reports in it."""
+    out = {}
+    lg = sorted((x[0], x[0] + x[2][2]) for x in seg if x[1] == "W" and x[2][0] in (15, 16, 17) and x[2][2] >= 500)
+    if not lg:
+        return out
+    p1 = [r for r in lg if r[0] < lg[0][0] + 3000]
+    p1e = max(r[1] for r in p1)
+    p2 = [r for r in lg if r[0] > p1e]
+    rel = lambda t: (t - s) / 1000
+    out["EDGE pass 1 start"] = rel(lg[0][0])
+    out["EDGE pass 1 end"] = rel(p1e)
+    long_end = [x[0] + x[2][2] for x in seg if x[1] == "W" and x[2][2] >= 500]
+    if p2:
+        p2s, p2e = p2[0][0], max(r[1] for r in p2)
+        out["EDGE pass 2 start"] = rel(p2s)
+        out["EDGE pass 2 end"] = rel(p2e)
+        out["gap pass 1 -> 2"] = (p2s - p1e) / 1000
+        nspu = len({r[3] for r in wruns[-5000:]}) or 6
+        lo = bisect.bisect_left(wruns, (p1e - 30000,))
+        hi = bisect.bisect_left(wruns, (p2s,))
+        busy = sum(max(0, min(e, p2s) - max(b, p1e)) for b, e, _, _ in wruns[lo:hi] if e > p1e)
+        out["SPU busy % in that gap"] = 100 * busy / max(1, (p2s - p1e) * nspu)
+        g = [x[0] for x in seg if x[1] == "G" and p1e <= x[0] < p2s]
+        if g:
+            out["RSX report in gap (first)"] = rel(g[0])
+            out["RSX report in gap (last)"] = rel(g[-1])
+            out["last report -> pass 2"] = (p2s - g[-1]) / 1000
+    if long_end:
+        out["last long SPU run end"] = rel(max(long_end))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("log")
@@ -57,6 +96,7 @@ def main():
     if len(starts) < 3:
         raise SystemExit("no frame starts (PPU writes to 0x99AAA0) in the log: see the usage for the variables")
     starts = starts[-(a.frames + 1):]
+    wruns = sorted((x[0], x[0] + x[2][2], x[2][0], x[2][1]) for x in ev if x[1] == "W")
     rows = []
     wids = collections.defaultdict(list)   # wid -> per frame (busy ms, first start, last end)
     for fi, (s, e) in enumerate(zip(starts, starts[1:])):
@@ -78,7 +118,9 @@ def main():
             "video picture": first(lambda x: x[1] == "V"),
             "tasks first wake": first(lambda x: x[1] == "T" and x[2][1] == "exit"),
             "tasks last park": last(lambda x: x[1] == "T" and x[2][1] == "enter"),
+            "RSX report, first awaited": first(lambda x: x[1] == "G" and x[2][1]),
         })
+        rows[-1].update(edge_passes(seg, s, wruns))
         # time each task spent out of WAIT_SIGNAL in this frame
         busy, out = collections.Counter(), {}
         for x in seg:
@@ -104,14 +146,15 @@ def main():
         if fi >= len(starts) - 1 - a.show:
             print(f"--- frame of {(e - s) / 1000:.1f} ms")
             for x in seg:
-                kind = {"R": "GPU", "S": "SPU", "P": "PPU", "V": "VID", "T": "TSK", "W": "WID"}[x[1]]
+                kind = {"G": "RSX", "R": "GPU", "S": "SPU", "P": "PPU", "V": "VID", "T": "TSK", "W": "WID"}[x[1]]
                 if x[1] == "W":
                     print(f"  {rel(x):7.2f} WID wid={x[2][0]} spu={x[2][1]} ran {x[2][2] / 1000:.2f} ms")
                     continue
                 print(f"  {rel(x):7.2f} {kind} {x[2] if x[1] != 'S' else ('wid', x[2][0], 'lr', x[2][1])}")
     print(f"{len(rows)} frames; ms from the frame's start (median, and in how many frames it happened):")
-    for k in rows[0]:
-        v = [r[k] for r in rows if r[k] is not None]
+    keys = list(dict.fromkeys(k for r in rows for k in r))
+    for k in keys:
+        v = [r[k] for r in rows if r.get(k) is not None]
         if v:
             print(f"  {k:24} {statistics.median(v):7.1f}   ({len(v)}/{len(rows)})")
     if wids:
