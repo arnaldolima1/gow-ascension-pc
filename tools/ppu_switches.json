@@ -20,5 +20,7 @@
   {"addr": "0x0032A838", "insn": "0x60630001", "env": "GOWA_ONLINE_PASS",
    "note": "ori r3,r3,1: the same, in the online state machine's other caller (func_0032A7FC)"},
   {"addr": "0x0032AA24", "insn": "0x60630001", "env": "GOWA_ONLINE_PASS",
-   "note": "ori r3,r3,1: the same, before func_0032A8A4's 'No Online Pass' test (else the 'An Online Pass is required' dialog and the store)"}
+   "note": "ori r3,r3,1: the same, before func_0032A8A4's 'No Online Pass' test (else the 'An Online Pass is required' dialog and the store)"},
+  {"addr": "0x003319BC", "insn": "0x38600001", "env": "GOWA_TSS_PLAIN",
+   "note": "li r3,1 in place of bl func_003E28E8 (the TSS decrypt, Blowfish-OFB with the game's own key): the title small storage is taken as plain text, written by our online (ascension-online SPEC 2.8) and handed over by ps3kit's sceNpLookupTitleSmallStorageAsync (PS3_NP_TSS). No key of the game is used"}
 ]
