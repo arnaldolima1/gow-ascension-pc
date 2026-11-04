@@ -19,6 +19,14 @@ $Tools = Join-Path $Cfg.PS3KIT_DIR "tools"
 $Spu   = Join-Path $Root "src\spu"
 $Log   = Join-Path $Root "build\logs\relift-$What.log"
 
+# Job modules and fragments: functions that use 17-64 SPU registers keep them
+# in C locals (ps3kit tools\spu_lifter.py, promote_registers_df). Job replay
+# -Base: whole LS identical; ~-2 % cycles a job (ps3kit docs\ASCENSION_PLAN.md
+# R6, 2026-11-03). Every function promoted was not identical (R7). Set
+# SPU_LIFT_PROMOTE yourself (0 for none) to override.
+$promoteDefault = ($What -in "jobmods", "fragments") -and -not $env:SPU_LIFT_PROMOTE
+if ($promoteDefault) { $env:SPU_LIFT_PROMOTE = "1"; $env:SPU_LIFT_PROMOTE_BAND = "17-64" }
+
 if ($What -eq "ppu") {
     # --reg-locals: each lifted function keeps the guest registers in C locals
     # and checks its guest accesses against a view of the memory globals read
@@ -87,3 +95,4 @@ if ($What -eq "ppu") {
         --fragments (Join-Path $Root "tools\job_fragments.json") --out $Spu --register (Join-Path $Spu "pic_register.c") `
         --symbol-prefix ascension @(if ($Only) { "--only", $Only }) 2>&1 | Tee-Object $Log
 }
+if ($promoteDefault) { Remove-Item Env:SPU_LIFT_PROMOTE, Env:SPU_LIFT_PROMOTE_BAND }

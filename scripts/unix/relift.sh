@@ -26,6 +26,10 @@ if [ -z "$PYTHON" ]; then
     if [ -x "$top/.venv/bin/python" ]; then PYTHON="$top/.venv/bin/python"; else PYTHON=python3; fi
 fi
 mkdir -p "$here/build/logs"
+# Job modules and fragments: functions using 17-64 SPU registers keep them in C
+# locals, as relift.ps1 (ASCENSION_PLAN.md R6). SPU_LIFT_PROMOTE=0 for none.
+promote=${SPU_LIFT_PROMOTE:-1}
+band=${SPU_LIFT_PROMOTE_BAND:-17-64}
 
 lift() {
     what=$1
@@ -47,12 +51,14 @@ lift() {
             --extra-funcs spu_wws_pm_at_0077CA80=0xA2C,0xA68,0x3368,0x3378 > "$log" 2>&1 ;;
     jobmods)
         # merged chunks and module 218's native functions, as relift.ps1
+        SPU_LIFT_PROMOTE=$promote SPU_LIFT_PROMOTE_BAND=$band \
         LIFT_JOBMODS_MERGE=1 LIFT_NATIVE="$PS3KIT_DIR/libs/spu_hle/gowa_drawcmd/native_functions.txt" \
         "$PYTHON" "$tools/lift_jobmods.py" --jobmods "$jobmods" --out "$spu" \
             --register "$spu/jobmods_register.c" --symbol-prefix ascension \
             --extra-funcs-json "$here/tools/jobmods_extra_funcs.json" > "$log" 2>&1 ;;
     fragments)
         [ -f "$elf" ] || { echo "no $elf" >&2; exit 1; }
+        SPU_LIFT_PROMOTE=$promote SPU_LIFT_PROMOTE_BAND=$band \
         "$PYTHON" "$tools/lift_spu_pic.py" --elf "$elf" --fragments "$here/tools/job_fragments.json" \
             --out "$spu" --register "$spu/pic_register.c" --symbol-prefix ascension > "$log" 2>&1 ;;
     *)
