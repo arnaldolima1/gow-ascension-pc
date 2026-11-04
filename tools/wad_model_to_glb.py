@@ -1,7 +1,7 @@
 """A model straight from the player's own WAD (no game running): EDGE segments to GLB.
 
     python3 tools/wad_model_to_glb.py R_SPARTANAVS00.WAD --mg MG_70b97feb_0 --glb body.glb
-        [--ts R_SPARTANAVS00.TS] [--decaps] [--no-normals] [--pose JOBCAP] [--list]
+        [--ts R_SPARTANAVS00.TS] [--decaps] [--no-normals] [--no-orm] [--pose JOBCAP] [--list]
 
 For the 3D profile (ascension-online docs/ONLINE.md, S9). Read 2026-11-04 against the RSX and SPU
 job captures (RSX_DRAW_DUMP, SPU_JOBCAP); the files come from the player's disc and stay on that PC.
@@ -211,6 +211,46 @@ def normal_texture(blocks, ts, txs, images):
     return None
 
 
+def material_roles(blocks, mat):
+    """{role: texture} of a MAT_ block: each texture name follows a header whose bytes are the
+    role, the texture unit and 0x51. Roles read on the warrior: 0x02 colour, 0x07 normal map,
+    0x09 specular (grey), 0x0B ambient occlusion, 0x14 a grey shading layer, 0x03 an 8x8 white
+    default, 0x0E/0x04/0x0F/0x33 the animated effects (glow mask, a decal and its mask, the blue
+    veins), off in the lobby."""
+    data = next(d for o, t, f, s, n, d in blocks if n == mat and s)
+    out = {}
+    for m in re.finditer(rb"TX[0-9A-F]{8}\.[0-9A-F]{8}\.dds", data):
+        p = data.rfind(b"\x51\x00\x00\x00", 0, m.start())
+        if p >= 2:
+            out.setdefault(data[p - 2], m.group().decode())
+    return out
+
+
+def orm_texture(blocks, ts, roles, images):
+    """glTF occlusion (R) + roughness (G) from the AO (0x0B) and specular (0x09) maps."""
+    from PIL import Image
+    ao_tx, sp_tx = roles.get(0x0B), roles.get(0x09)
+    key = "orm:%s:%s" % (ao_tx, sp_tx)
+    if key in images:
+        return key
+    try:
+        sp = texture(blocks, ts, sp_tx).convert("L") if sp_tx else None
+    except (StopIteration, KeyError, ValueError):
+        sp = None
+    try:
+        ao = texture(blocks, ts, ao_tx).convert("L") if ao_tx else None
+    except (StopIteration, KeyError, ValueError):
+        ao = None
+    if sp is None and ao is None:
+        return None
+    size = (sp or ao).size
+    ao = ao.resize(size) if ao else Image.new("L", size, 255)
+    # more specular, smoother: the grey map's mean (~0.27) gives roughness ~0.7
+    rough = sp.point(lambda v: int(255 * max(0.25, min(1.0, 0.95 - 0.9 * v / 255)))) if sp else Image.new("L", size, 190)
+    images[key] = Image.merge("RGB", (ao, rough, Image.new("L", size, 0)))
+    return key
+
+
 def material_textures(blocks, mat):
     data = next(d for o, t, f, s, n, d in blocks if n == mat and s)
     return [m.group().decode() for m in re.finditer(rb"TX[0-9A-F]{8}\.[0-9A-F]{8}\.dds", data)]
@@ -224,7 +264,8 @@ def main():
     ap.add_argument("--glb")
     ap.add_argument("--ts", help="the .TS beside the WAD (textures' large levels)")
     ap.add_argument("--pose", help="an SPU_JOBCAP dir: the pose the game had there (tools/lobby_pose.py); default the bind pose")
-    ap.add_argument("--no-normals", action="store_true", help="colour maps only")
+    ap.add_argument("--no-normals", action="store_true", help="no normal maps")
+    ap.add_argument("--no-orm", action="store_true", help="no occlusion/roughness maps")
     ap.add_argument("--decaps", action="store_true", help="keep the decapitation caps (hidden in game until a cut)")
     ap.add_argument("--tex", type=int, default=1024)
     ap.add_argument("--list", action="store_true")
@@ -253,11 +294,14 @@ def main():
             key = (None, None)
             if ts and mat:
                 txs = material_textures(blocks, mat)
-                if txs:
-                    if txs[0] not in images:
-                        images[txs[0]] = texture(blocks, ts, txs[0])
-                    nm = None if a.no_normals else normal_texture(blocks, ts, txs, images)
-                    key = (txs[0], nm)
+                roles = material_roles(blocks, mat)
+                colour = roles.get(0x02) or (txs[0] if txs else None)
+                if colour:
+                    if colour not in images:
+                        images[colour] = texture(blocks, ts, colour)
+                    nm = None if a.no_normals else normal_texture(blocks, ts, [roles[0x07]] if 0x07 in roles else txs, images)
+                    orm = None if a.no_orm else orm_texture(blocks, ts, roles, images)
+                    key = (colour, nm, orm) if orm else (colour, nm)
             glb_pieces.append((name, P, UV, T, key))
     out = glb_pieces
     print("%d pieces, %d triangles" % (len(out), sum(len(p[3]) for p in out)))

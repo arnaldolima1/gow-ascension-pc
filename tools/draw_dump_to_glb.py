@@ -201,14 +201,21 @@ def write_glb(path, pieces, images, tex_max):
         return img_of[key]
 
     mat_of = {}
-    for colour, normal in sorted({p[4] for p in pieces if p[4][0]}, key=str):
+    for key in sorted({p[4] for p in pieces if p[4][0]}, key=str):
+        # (colour, normal) or (colour, normal, orm): orm packs occlusion in R, roughness in G
+        colour, normal = key[0], key[1]
+        orm = key[2] if len(key) > 2 else None
         m = {"name": os.path.basename(colour), "pbrMetallicRoughness": {
             "baseColorTexture": {"index": image(colour)}, "metallicFactor": 0.0, "roughnessFactor": 0.75},
             "doubleSided": True}
         if normal:
             m["normalTexture"] = {"index": image(normal)}
+        if orm:
+            m["pbrMetallicRoughness"]["metallicRoughnessTexture"] = {"index": image(orm)}
+            m["pbrMetallicRoughness"]["roughnessFactor"] = 1.0
+            m["occlusionTexture"] = {"index": image(orm)}
         mats.append(m)
-        mat_of[(colour, normal)] = len(mats) - 1
+        mat_of[key] = len(mats) - 1
     mats.append({"name": "plain", "pbrMetallicRoughness": {"baseColorFactor": [0.6, 0.55, 0.5, 1],
                  "metallicFactor": 0.0, "roughnessFactor": 0.9}, "doubleSided": True})
     plain = len(mats) - 1
