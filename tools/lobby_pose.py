@@ -16,6 +16,12 @@ Read 2026-11-04 against the RSX draw dump (the posed positions agree to ~1 mm):
   floats (out = c0 * x + c1 * y + c2 * z + c3), world space;
 - bone bytes are 8 a vertex: weight, bone, weight, bone ... (weight / 255), as ps3kit job.c
   `job_skin` (0xE550) reads them;
+- the palette is two runs of the model's joint matrix array (one per entry), written in the
+  segment's descriptor on the disc: C+0x34 u16 byte offsets of the two runs (joint * 64), C+0x38
+  u16 their sizes in bytes; the joints are the skeleton's (the object block after `go<name>`:
+  250 joints, records of u16 flags, first child, next sibling, parent at +0x24, names of 56 bytes
+  at +0x7F4, 4x4 tables at +0x4BE0 (local, in the joints' own frames) and +0x8A60 (the inverse
+  bind pose in world space)); in the lobby capture the array starts at EA 0x71BB48E0;
 - a segment with no palette (the small rigid pieces of the head) is placed by the RSX vertex
   program, not the job: here each of its vertices takes the blended matrix of the nearest skinned
   vertex in the bind pose.
