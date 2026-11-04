@@ -182,6 +182,8 @@ add_executable(${PROJECT_NAME}
     # Runtime switches this title needs on by default (live draw engine,
     # host Edge Zlib).
     "${CMAKE_CURRENT_SOURCE_DIR}/host/ascension_defaults.cpp"
+    # The game's stripped debug printf, printed with GOWA_GAMELOG=1.
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/game_log.cpp"
     ${PS3RECOMP_SCAFFOLD}
     ${HLE_NID_TABLE}
     ${RECOMP_SOURCES}

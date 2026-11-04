@@ -1,0 +1,4 @@
+[
+  {"addr": "0x001B16E4", "nid": "0xA0C0DE01",
+   "note": "the game's stripped debug printf (level, format, args...): host/game_log.cpp prints it with GOWA_GAMELOG=1"}
+]
