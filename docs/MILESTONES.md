@@ -33,3 +33,8 @@ What the game could do, and when.
 | 2026-10-23 | Level ~17.5 → ~22 fps: lifted SPU code built for AVX2, lighter SPU runtime. |
 | 2026-10-23 | **The frame's edge-smoothing post-process runs natively:** its four heaviest SPU stages rewritten in C, identical to the original on 12 million checked calls; that work costs about half. |
 | 2026-10-23 | **First boss fight reached** (13-21 fps while fighting). The profile there shows the SPU time spread over many small pieces, so the next work goes after costs every SPU job pays, not one function at a time. |
+| 2026-11-03 | Measured on Windows against RPCS3 in the same first-level scene: 22 fps native, 35-40 on RPCS3. Two changes become the default: the RSX thread sleeps on an empty command queue instead of spinning (~8% shorter frames on a 4-core PC), and the SPUs pick their next work themselves (~1.6% shorter on the same PC). |
+| 2026-11-03 | **The intermittent level freeze found and fixed:** a store from the main processor could be lost in the middle of an SPU's atomic operation, leaving the geometry lists waiting forever. The repro went from 3 freezes in 5 runs to none in 4. |
+| 2026-11-04 | The first level's frame measured part by part: of ~50 ms, ~21 ms are the SPUs' geometry lists (EDGE) and ~9-12 ms the wait for the RSX thread between that geometry's two passes. |
+| 2026-11-04 | **Runs on macOS again** (Apple Silicon, RPCS3's RSX), for testing: the RSX thread now recovers from corrupted command data instead of stopping the game. |
+| 2026-11-04 | **Multiplayer reaches the warrior lobby** with the project's own server (in development, still private); the player's multiplayer profile is kept on their account. Online matches do not work yet. |
