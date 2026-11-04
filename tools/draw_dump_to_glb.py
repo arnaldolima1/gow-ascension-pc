@@ -139,7 +139,9 @@ def to_normal(im):
     for i in range(len(xs)):
         x, y = xs[i] / 127.5 - 1.0, ys[i] / 127.5 - 1.0
         z[i] = int((max(0.0, 1.0 - x * x - y * y) ** 0.5) * 127.5 + 127.5)
-    return Image.merge("RGB", (a, g, Image.frombytes("L", im.size, bytes(z))))
+    # The game's Y points down the texture; glTF wants +Y up (checked 2026-11-04 on the chest and
+    # abs under a light from above: the unflipped map lit the underside of the muscles).
+    return Image.merge("RGB", (a, g.point(lambda v: 255 - v), Image.frombytes("L", im.size, bytes(z))))
 
 
 def inside(P, box):
