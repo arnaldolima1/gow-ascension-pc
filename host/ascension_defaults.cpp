@@ -187,6 +187,16 @@ struct AscensionDefaults {
         // 8 logical CPUs, menu frame -0.6 ms (+0.9 fps); first level and 12
         // CPUs the same.
         set_default("PS3_RSX_HOLD_WAIT", "1");
+        // On an empty FIFO the RSX thread sleeps until the put, a flush or a
+        // flip moves, instead of a yield loop that was ~45 % of its samples in
+        // the first level. 4 cores / 8 threads: frame 72.2 -> 66.2 ms, p90
+        // 80.1 -> 71.7 ms, the RSX thread 0.90 -> 0.37 cores; 16 threads: the
+        // same (2026-11-03, ps3kit docs/ASCENSION_PLAN.md).
+        set_default("PS3_RSX_IDLE_WAIT", "1");
+        // A SPURS worker takes its next workload itself instead of waking the
+        // coordinator: in-run A/B, first level, frame -0.38 ms (16 threads) and
+        // -1.48 ms (4 cores / 8 threads), no hang (2026-11-03).
+        set_default("SPURS_SELF_SELECT", "1");
         // The job scheduler's not-ready turn (0x416AAC, tools/ppu_switches.json)
         // sleeps until an SPU's next write instead of scanning its table again:
         // menu at 8 logical CPUs -1.0 ms a frame, +1.3 fps; first level the same.
