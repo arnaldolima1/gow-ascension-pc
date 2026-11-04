@@ -14,5 +14,11 @@
   {"addr": "0x00369B34", "insn": "0x60000000", "env": "GOWA_NO_MLAA",
    "note": "nop: MLAA off (RPCS3 'Disable MLAA', 1.12 0x397754), with PS3_IMAGE_PATCH=81C9B7:00"},
   {"addr": "0x00369B64", "insn": "0x60000000", "env": "GOWA_NO_MLAA",
-   "note": "nop: MLAA off (RPCS3 'Disable MLAA', 1.12 0x397784)"}
+   "note": "nop: MLAA off (RPCS3 'Disable MLAA', 1.12 0x397784)"},
+  {"addr": "0x0022D0EC", "insn": "0x60630001", "env": "GOWA_ONLINE_PASS",
+   "note": "ori r3,r3,1 in the nop after bl func_002ADCC0 (the installed-DLC bits, [[0x81AD74]+0x700]; bit 0 = DLC0 = the Online Pass, from /DLC/DLC0/INDEX.EDAT): the pass counts as owned. The launcher sets it with our online (ascension-online SPEC 2.7)"},
+  {"addr": "0x0032A838", "insn": "0x60630001", "env": "GOWA_ONLINE_PASS",
+   "note": "ori r3,r3,1: the same, in the online state machine's other caller (func_0032A7FC)"},
+  {"addr": "0x0032AA24", "insn": "0x60630001", "env": "GOWA_ONLINE_PASS",
+   "note": "ori r3,r3,1: the same, before func_0032A8A4's 'No Online Pass' test (else the 'An Online Pass is required' dialog and the store)"}
 ]
