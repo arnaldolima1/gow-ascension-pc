@@ -36,8 +36,8 @@ import argparse, struct
 
 KERNELS = {  # id -> (LS entry in module 216, what it does)
     0x15: (0x5DB8, "constant float3: N u16 destinations, then N x 12-byte floats -> (x, y, z, 0)"),
-    0x16: (0x5C08, "constant, 16-bit halves (shift + x 2^112), 48-byte groups -> quads"),
-    0x18: (0x60A8, "constant, quantized (cuflt with a scale)"),
+    0x16: (0x5C08, "constant float3 as three IEEE halves (half): destinations, then 6 bytes each"),
+    0x18: (0x60A8, "constant rotations: 48-bit smallest-three quaternions (quat48)"),
     0x19: (0x5ED8, "constant (seen in the second frame set)"),
     0x0B: (0x63F8, "animated"), 0x1B: (0x6DC0, "animated"), 0x1D: (0xAC80, "animated"),
     0x1E: (0xAE90, "animated"), 0x0F: (0x96B0, "animated"), 0x10: (0x9838, "animated"),
@@ -98,6 +98,52 @@ def kernel_15(anm, sec, buf):
     vals = sec["at"] + ((2 * n + 15) & ~15)
     for i in range(n):
         buf[dst[i]] = struct.unpack_from(">3f", anm, vals + 12 * i) + (0.0,)
+
+
+def half(h):
+    """IEEE half as module 216 converts it: (h << 13 with the sign kept) * 2^112 -- no special cases"""
+    bits = ((h & 0x8000) << 16) | ((h & 0x7FFF) << 13)
+    return struct.unpack(">f", struct.pack(">I", bits))[0] * 2.0 ** 112
+
+
+def kernel_16(anm, sec, buf):
+    """constant, three halves per channel: destinations then values; (x, y, z, 0)"""
+    n = sec["count"] & 0x7FFF
+    dst = [u16(anm, sec["at"] + 2 * i) for i in range(n)]
+    vals = sec["at"] + ((2 * n + 15) & ~15)
+    for i in range(n):
+        buf[dst[i]] = tuple(half(u16(anm, vals + 6 * i + 2 * c)) for c in range(3)) + (0.0,)
+
+
+SQRT2 = 2.0 ** 0.5
+
+
+def quat48(raw):
+    """48-bit smallest-three quaternion (module 216's kernel 0x18): u16 a, u16 b, u16 c; c's low 2 bits
+    the index of the dropped (largest, positive) component; a (16 bits) and b (its top 15 bits) offset binary * sqrt2/2^16;
+    c's top 14 bits signed * sqrt2/2^15; the fields are (x, y, z) with the dropped one replaced by w."""
+    a, b, c = struct.unpack(">HHH", raw)
+    idx = c & 3
+    fa = (a - 0x8000) * SQRT2 / 65536
+    fb = ((b & 0xFFFE) - 0x8000) * SQRT2 / 65536      # b is 15 bits: its low bit is not part of the value
+    fc = (struct.unpack(">h", struct.pack(">H", c & 0xFFFC))[0] >> 2) * SQRT2 / 32768
+    slots = [0, 1, 2]
+    if idx < 3:
+        slots[idx] = 3
+    q = [0.0] * 4
+    for k, v in zip(slots, (fa, fb, fc)):
+        q[k] = v
+    q[idx] = max(0.0, 1.0 - sum(v * v for v in q)) ** 0.5
+    return tuple(q)
+
+
+def kernel_18(anm, sec, buf):
+    """constant rotations, 48-bit smallest-three quaternions: destinations then 6 bytes each"""
+    n = sec["count"] & 0x7FFF
+    dst = [u16(anm, sec["at"] + 2 * i) for i in range(n)]
+    vals = sec["at"] + ((2 * n + 15) & ~15)
+    for i in range(n):
+        buf[dst[i]] = quat48(anm[vals + 6 * i:vals + 6 * i + 6])
 
 
 def skeleton_descriptor(anm):
