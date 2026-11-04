@@ -197,6 +197,13 @@ struct AscensionDefaults {
         // coordinator: in-run A/B, first level, frame -0.38 ms (16 threads) and
         // -1.48 ms (4 cores / 8 threads), no hang (2026-11-03).
         set_default("SPURS_SELF_SELECT", "1");
+        // A PPU store to a line an SPU ever reserved takes the lock-line lock,
+        // so a PUTLLC's whole-line copy cannot undo it. The game re-arms its
+        // EDGE wake counters (0x0099AA80) with plain stores; a lost re-arm
+        // froze it (no EDGE list ready, the PPU spinning in its job
+        // scheduler). 6 cores with 5 SPU workers: froze 3 runs of 5 without,
+        // 0 of 4 with, same frame time (2026-11-03).
+        set_default("PS3_COH_STORE_LOCK", "1");
         // The job scheduler's not-ready turn (0x416AAC, tools/ppu_switches.json)
         // sleeps until an SPU's next write instead of scanning its table again:
         // menu at 8 logical CPUs -1.0 ms a frame, +1.3 fps; first level the same.
