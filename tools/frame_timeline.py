@@ -90,11 +90,15 @@ def main():
     ap.add_argument("log")
     ap.add_argument("--frames", type=int, default=200)
     ap.add_argument("--show", type=int, default=0)
+    ap.add_argument("--end-us", type=int, default=0,
+                    help="only frames that start before this log time (us), e.g. where a capped log stops")
     a = ap.parse_args()
     ev = parse(a.log)
     starts = [e[0] for e in ev if e[1] == "P" and e[2][0] == 0x99AAA0]
     if len(starts) < 3:
         raise SystemExit("no frame starts (PPU writes to 0x99AAA0) in the log: see the usage for the variables")
+    if a.end_us:
+        starts = [t for t in starts if t < a.end_us]
     starts = starts[-(a.frames + 1):]
     wruns = sorted((x[0], x[0] + x[2][2], x[2][0], x[2][1]) for x in ev if x[1] == "W")
     rows = []
