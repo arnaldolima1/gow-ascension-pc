@@ -155,7 +155,9 @@ def main():
     ap.add_argument("--mg", action="append", help="mesh group block name (repeat); default: every MG_ block")
     ap.add_argument("--glb")
     ap.add_argument("--ts", help="the .TS beside the WAD (textures' large levels)")
-    ap.add_argument("--material", help="put this MAT_'s colour map on every piece (a preview until S9.4)")
+    ap.add_argument("--material", default="MAT_body_skin_layered",
+                    help="colour map for the pieces whose UVs are negative (the body's skin atlas); a preview until S9.4")
+    ap.add_argument("--head-material", help="colour map for the pieces whose UVs are in 0..1 (default: the first MAT_ of the model's group)")
     ap.add_argument("--tex", type=int, default=1024)
     ap.add_argument("--list", action="store_true")
     a = ap.parse_args()
@@ -173,13 +175,29 @@ def main():
     for o, t, f, s, n, d in blocks:
         if n in names and s:
             out += pieces(d, n)
-    images, key = {}, (None, None)
-    if a.material:
-        ts = open(a.ts, "rb").read() if a.ts else b""
-        tx = material_textures(blocks, a.material)
-        images[tx[0]] = texture(blocks, ts, tx[0])
-        key = (tx[0], None)
-    glb_pieces = [(n, P, UV, T, key) for n, P, UV, T in out]
+    # Which material a segment uses is the game's choice (S9.4). Until then: the body's pieces map
+    # into the skin atlas with u in -1..0, the head's (face, eyes, mouth) with u in 0..1.
+    images, skin_key, head_key = {}, (None, None), (None, None)
+    if a.ts:
+        ts = open(a.ts, "rb").read()
+        head_mat = a.head_material
+        if not head_mat:
+            idx = next((i for i, b in enumerate(blocks) if b[4].startswith("MDL_") and b[3] and
+                        any(b[4][4:].lower() in m.lower() for m in names)), None)
+            if idx is not None:
+                head_mat = next((blocks[k][4] for k in range(idx + 1, len(blocks)) if blocks[k][4].startswith("MAT_")), None)
+        for mat, which in ((a.material, "skin"), (head_mat, "head")):
+            try:
+                tx = material_textures(blocks, mat)[0]
+            except (StopIteration, IndexError, TypeError):
+                continue
+            images[tx] = texture(blocks, ts, tx)
+            if which == "skin":
+                skin_key = (tx, None)
+            else:
+                head_key = (tx, None)
+    glb_pieces = [(n, P, UV, T, head_key if UV and head_key[0] and min(u[0] for u in UV) >= -0.001 else skin_key)
+                  for n, P, UV, T in out]
     print("%d pieces, %d triangles" % (len(out), sum(len(p[3]) for p in out)))
     if a.glb and out:
         size = G.write_glb(a.glb, glb_pieces, images, a.tex)

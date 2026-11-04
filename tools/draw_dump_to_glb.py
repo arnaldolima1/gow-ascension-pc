@@ -211,12 +211,30 @@ def write_glb(path, pieces, images, tex_max):
                  "metallicFactor": 0.0, "roughnessFactor": 0.9}, "doubleSided": True})
     plain = len(mats) - 1
 
+    # Smooth normals across pieces: vertices at the same place (a seam between two pieces) share
+    # one normal, so the light does not break where two pieces meet.
+    acc_n = {}
+    qk = lambda p: (round(p[0], 4), round(p[1], 4), round(p[2], 4))
+    for name, P, UV, T, key in pieces:
+        for a, b, c in T:
+            ux, uy, uz = (P[b][k] - P[a][k] for k in range(3))
+            vx, vy, vz = (P[c][k] - P[a][k] for k in range(3))
+            n = (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
+            for i in (a, b, c):
+                s_ = acc_n.setdefault(qk(P[i]), [0.0, 0.0, 0.0])
+                s_[0] += n[0]; s_[1] += n[1]; s_[2] += n[2]
+
+    def welded(p):
+        n = acc_n.get(qk(p), (0.0, 1.0, 0.0))
+        l = (n[0] ** 2 + n[1] ** 2 + n[2] ** 2) ** 0.5 or 1.0
+        return (n[0] / l, n[1] / l, n[2] / l)
+
     for name, P, UV, T, key in pieces:
         used = sorted({i for t in T for i in t})
         remap = {o: n for n, o in enumerate(used)}
         T2 = [tuple(remap[i] for i in t) for t in T]
         PP = [P[i] for i in used]
-        NN = normals(PP, T2)
+        NN = [welded(p) for p in PP]
         attrs = {
             "POSITION": acc(struct.pack("<%df" % (3 * len(PP)), *[c for p in PP for c in p]), 5126, len(PP), "VEC3",
                             34962, [min(p[k] for p in PP) for k in range(3)], [max(p[k] for p in PP) for k in range(3)]),
