@@ -1,7 +1,7 @@
 """Turn GOWA_MESH_DUMP files (ps3kit gowa_drawcmd hooks.c) into Wavefront OBJ, to look at.
 
     python3 tools/mesh_dump_to_obj.py <dump dir> [--min-tris 50] [--out <dir>] [--first N] [--last N] [--latest N] [--quiet]
-        [--box x0,y0,z0,x1,y1,z1] [--glb <file>]
+        [--box x0,y0,z0,x1,y1,z1] [--unique] [--glb <file>]
 
 mesh_<n>.idx: u16 big-endian triangle-list indices; mesh_<n>.pos: x y z w
 big-endian floats, one vertex each. One OBJ per mesh, plus all.obj with every
@@ -13,7 +13,7 @@ import argparse, json, pathlib, struct
 def load(idx, pos):
     ib = idx.read_bytes(); pb = pos.read_bytes()
     ind = struct.unpack(">%dH" % (len(ib) // 2), ib[: len(ib) // 2 * 2])
-    nv = len(pb) // 16
+    nv = len(pb) // 16   # a file cut short (the ring written over at exit) loses only its tail
     verts = [struct.unpack(">4f", pb[i * 16:i * 16 + 16])[:3] for i in range(nv)]
     tris = [ind[i:i + 3] for i in range(0, len(ind) - 2, 3) if max(ind[i:i + 3]) < nv]
     return verts, tris
@@ -54,6 +54,8 @@ def main():
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--latest", type=int, help="only the N newest meshes by file time (GOWA_MESH_DUMP is a ring)")
     ap.add_argument("--glb", help="also write the meshes of at least --min-tris triangles to this GLB, one node each")
+    ap.add_argument("--unique", action="store_true",
+                    help="one copy of each piece (same counts, centre within 12 cm), the newest: a whole model out of several frames")
     ap.add_argument("--box", help="keep only meshes inside x0,y0,z0,x1,y1,z1")
     a = ap.parse_args()
     src = pathlib.Path(a.dir); out = pathlib.Path(a.out or src / "obj"); out.mkdir(exist_ok=True)
@@ -62,7 +64,8 @@ def main():
     files = sorted(src.glob("mesh_*.idx"))
     if a.latest:
         files = sorted(files, key=lambda f: f.with_suffix(".pos").stat().st_mtime_ns if f.with_suffix(".pos").exists() else 0)[-a.latest:]
-    for idx in files:
+    picked = []
+    for idx in (reversed(files) if a.unique else files):
         n = int(idx.stem.split("_")[1])
         if n < a.first or n > a.last: continue
         pos = idx.with_suffix(".pos")
@@ -72,6 +75,12 @@ def main():
         if box:
             u = [v[i] for i in {i for tri in t for i in tri}]
             if not all(box[k] <= p[k] <= box[k + 3] for p in u for k in range(3)): continue
+        if a.unique:
+            u = [v[i] for i in {i for tri in t for i in tri}]
+            c = [sum(p[k] for p in u) / len(u) for k in range(3)]
+            sig = (len(u), len(t))
+            if any(g == sig and sum((c[k] - gc[k]) ** 2 for k in range(3)) < 0.12 ** 2 for g, gc in picked): continue
+            picked.append((sig, c))
         with open(out / (idx.stem + ".obj"), "w") as f:
             f.writelines(f"v {x} {y} {z}\n" for x, y, z in v)
             f.writelines(f"f {i+1} {j+1} {k+1}\n" for i, j, k in t)
