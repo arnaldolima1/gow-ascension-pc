@@ -17,7 +17,7 @@
 
 ---
 
-O Ascension traduz o código do jogo, do processador principal (PPU) e dos SPUs do PS3, para C++ e o compila para o seu PC, sobre o runtime do [ps3recomp](https://github.com/sp00nznet/ps3recomp). Não é um emulador: é o próprio jogo, recompilado. É irmão do [Sparta](https://github.com/arnaldolima1/gow-ghost-of-sparta-pc) e do [Olympus](https://github.com/arnaldolima1/gow-chains-of-olympus-pc), que fazem o mesmo com os God of War de PSP.
+O Ascension traduz o código do jogo, do processador principal (PPU) e dos SPUs do PS3, para C++ e o compila para o seu PC, sobre o runtime do [ps3recomp](https://github.com/sp00nznet/ps3recomp). Não é um emulador: é o próprio jogo, recompilado.
 
 > [!WARNING]
 > **Um experimento: ainda não dá para jogar do começo ao fim.** O jogo chega ao primeiro nível e à primeira luta contra um chefe, mas ainda lento (~18-23 fps no nível, 13-21 na luta). Feito para Windows; no macOS (Apple Silicon) ele voltou a rodar, por enquanto só para testes.
