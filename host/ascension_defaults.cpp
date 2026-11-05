@@ -221,6 +221,14 @@ struct AscensionDefaults {
         // scheduler). 6 cores with 5 SPU workers: froze 3 runs of 5 without,
         // 0 of 4 with, same frame time (2026-11-03).
         set_default("PS3_COH_STORE_LOCK", "1");
+        // The streaming table's PPU/SPU hand-off (host/texstream_sync.cpp,
+        // docs/TEXSTREAM_SYNC.md): the PPU's waits read 0x967028 while the
+        // streaming jobs are counted at 0x967024, so it could rewrite the table
+        // under an SPU job's snapshot: "CopyLocalMemory offset error", then a
+        // freeze, in 2 of 28 level runs. With the guard, 20 level runs on 4 cores:
+        // 0 copy errors, overlaps caught in every run (4-32, waits up to 18 ms),
+        // fps unchanged (2026-11-05, ps3kit docs/ASCENSION_PLAN.md S12 Q3).
+        set_default("GOWA_TEXSTREAM_SYNC", "1");
         // The job scheduler's not-ready turn (0x416AAC, tools/ppu_switches.json)
         // sleeps until an SPU's next write instead of scanning its table again:
         // menu at 8 logical CPUs -1.0 ms a frame, +1.3 fps; first level the same.
