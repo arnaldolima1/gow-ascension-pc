@@ -1,6 +1,6 @@
 # Milestones
 
-What the game could do, and when.
+What the game could do, and when. Brazilian Portuguese: [MILESTONES.pt-BR.md](MILESTONES.pt-BR.md); a new row goes in both files.
 
 | Date | Milestone |
 | --- | --- |

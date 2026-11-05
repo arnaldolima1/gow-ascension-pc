@@ -6,7 +6,7 @@
 
 **God of War: Ascension (PS3), recompilado para rodar nativamente no PC.**
 
-[![Status](https://img.shields.io/badge/status-experimento-lightgrey)](docs/MILESTONES.md)
+[![Status](https://img.shields.io/badge/status-experimento-lightgrey)](docs/MILESTONES.pt-BR.md)
 [![Release](https://img.shields.io/badge/release-ainda%20n%C3%A3o-lightgrey)](#onde-estamos)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D4)](#compilando)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)](LICENSE)
@@ -33,7 +33,7 @@ Novembro de 2026, no Windows (e no Mac, em testes):
 - **Dois renderizadores:** o RSX do [RPCS3](https://github.com/RPCS3/rpcs3) (Vulkan ou OpenGL), que desenha o jogo corretamente, e o *live draw* próprio do projeto (D3D12).
 - **Launcher** em português, inglês e espanhol, com vídeo (incluindo desligar efeitos como desfoque de profundidade, motion blur e MLAA, ainda experimental), controles, idioma, legendas e mods; **português do Brasil** com vozes e textos, montado a partir do seu disco americano.
 
-As mudanças de novembro estão no branch [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) até serem medidas no Windows. Ainda não há release. Os marcos estão em [docs/MILESTONES.md](docs/MILESTONES.md).
+As mudanças de novembro estão no branch [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) até serem medidas no Windows. Ainda não há release. Os marcos estão em [docs/MILESTONES.pt-BR.md](docs/MILESTONES.pt-BR.md) (em inglês: [MILESTONES.md](docs/MILESTONES.md)).
 
 ### Desempenho
 
