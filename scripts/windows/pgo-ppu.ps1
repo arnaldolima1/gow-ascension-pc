@@ -104,8 +104,15 @@ try {
     $ok = $true
 } finally {
     if (-not $ok) {
-        Get-Process AscensionRecomp -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -ge $t0 } | Stop-Process -Force
-        try { Set-PgoMode "OFF" } finally { Copy-Exe (Join-Path $caseDir "base") $buildDir }
+        $left = Get-Process AscensionRecomp -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -ge $t0 }
+        if ($left) { $left | Stop-Process -Force; $left | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue }
+        try { Set-PgoMode "OFF" } finally {
+            # The restore once failed on a still-running game: the next run then
+            # saved the instrumented executable as its "base".
+            Copy-Exe (Join-Path $caseDir "base") $buildDir
+            $same = (Get-FileHash (Join-Path $caseDir "base\AscensionRecomp.exe")).Hash -eq (Get-FileHash (Join-Path $buildDir "AscensionRecomp.exe")).Hash
+            if (-not $same) { Write-Host "WARNING: build\win\AscensionRecomp.exe is NOT the base executable: run build.ps1 before anything else." }
+        }
         Write-Host "PGO stopped: build\win is back to OFF with the base executable (the next build.ps1 recompiles the PPU sources)."
     }
 }
