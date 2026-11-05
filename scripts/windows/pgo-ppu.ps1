@@ -23,7 +23,10 @@ param(
     [int]$TrainSeconds = 330,
     [int]$FlushSeconds = 300
 )
-$ErrorActionPreference = "Stop"
+# Not "Stop": vcvars64.bat prints a harmless "vswhere.exe is not recognized" on
+# stderr, which Windows PowerShell 5.1 turns into a terminating error under
+# Stop. Failures are caught by $LASTEXITCODE and the explicit throws below.
+$ErrorActionPreference = "Continue"
 . (Join-Path $PSScriptRoot "env.ps1")
 $buildDir = Join-Path $Root "build\win"
 $logDir   = Join-Path $Root "build\logs"
