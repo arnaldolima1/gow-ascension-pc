@@ -3,6 +3,9 @@
 #   .\scripts\windows\pgo-ppu.ps1                 # instrumented build, training run, profile-guided build
 #   .\scripts\windows\pgo-ppu.ps1 -Swap base      # put the executable from before PGO back (A/B)
 #   .\scripts\windows\pgo-ppu.ps1 -Swap pgo       # and the profile-guided one again
+#   .\scripts\windows\pgo-ppu.ps1 -MetaOnly       # rewrite ppu.json (the players' build checks it)
+# For the players: work\launcher-tauri\pack_kit.py --pgo build\pgo\<Name> puts the
+# profile and ppu.json in the kit; tools\setup.py uses them when the lift matches.
 #
 # 1. Copies the current executable/map/pdb to build\pgo\<Name>\base.
 # 2. ASCENSION_PPU_PGO=GENERATE and a build: only the generated PPU sources get
@@ -21,7 +24,8 @@ param(
     [ValidatePattern('^[A-Za-z0-9_-]+$')][string]$Name = "pgo1",
     [ValidateSet("", "base", "pgo")][string]$Swap = "",
     [int]$TrainSeconds = 330,
-    [int]$FlushSeconds = 300
+    [int]$FlushSeconds = 300,
+    [switch]$MetaOnly                 # only (re)write build\pgo\<Name>\ppu.json from today's src\recomp
 )
 # Not "Stop": vcvars64.bat prints a harmless "vswhere.exe is not recognized" on
 # stderr, which Windows PowerShell 5.1 turns into a terminating error under
@@ -40,6 +44,19 @@ function Copy-Exe([string]$from, [string]$to) {
         if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination (Join-Path $to $f) -Force }
     }
 }
+
+# ppu.json beside the profile: each generated PPU file's SHA-256 and clang's
+# version. The players' build (tools/setup.py) uses the profile only when its
+# fresh lift has exactly these files (pack_kit.py --pgo ships both).
+function Write-PgoMeta([string]$dir) {
+    $files = [ordered]@{}
+    Get-ChildItem (Join-Path $Root "src\recomp") -File | Where-Object { $_.Name -match '^ppu_recomp.*\.(cpp|h)$' } |
+        Sort-Object Name | ForEach-Object { $files[$_.Name] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower() }
+    $clang = (cmd /c "`"$($Cfg.VCVARS)`" >nul 2>&1 && clang-cl --version" | Select-Object -First 1)
+    [ordered]@{ clang = "$clang"; files = $files } | ConvertTo-Json -Depth 4 |
+        Set-Content -Encoding ascii (Join-Path $dir "ppu.json")
+}
+if ($MetaOnly) { Write-PgoMeta $caseDir; Write-Host "wrote $caseDir\ppu.json"; exit 0 }
 
 if (Get-Process AscensionRecomp -ErrorAction SilentlyContinue) { throw "Close the running game first." }
 
@@ -95,6 +112,7 @@ try {
     & $profdata merge $raw -o $merged 2>&1 | Out-File -Encoding utf8 (Join-Path $logDir "$Name-merge.log")
     if ($LASTEXITCODE -ne 0) { throw "llvm-profdata merge failed: build\logs\$Name-merge.log" }
     & $profdata show $merged 2>&1 | Out-File -Encoding utf8 (Join-Path $logDir "$Name-profile-summary.txt")
+    Write-PgoMeta $caseDir
 
     Write-Host "[4/4] profile-guided build (all PPU sources)..."
     Set-PgoMode "USE" "-DASCENSION_PPU_PROFILE=`"$merged`""

@@ -151,10 +151,13 @@ def step_ppu(a, kit):
     out = path('src', 'recomp')
     if os.path.isdir(out):
         shutil.rmtree(out)
-    # --reg-locals: guest registers in C locals; --insn-switches: the GOWA_* environment switches
+    # --reg-locals: guest registers in C locals; --insn-switches: the GOWA_* environment switches; --hle-hooks:
+    # the game's own debug log and the online hooks (off unless their GOWA_* variable is set). As relift.ps1 ppu,
+    # so the players' lift is the developers' (and the kit's PGO profile, which is checked against it, applies).
     run(py(kit, 'ppu_lifter.py') + [path('input', 'EBOOT.ELF'), '--functions', path('meta', 'functions.json'),
         '--hle-stubs', path('meta', 'EBOOT.imports.json'), '--toc', '0x81EF60', '--code-end', '0x62C4CC',
-        '--chunk-lines', '150000', '--reg-locals', '--insn-switches', path('tools', 'ppu_switches.json'), '-o', out])
+        '--chunk-lines', '150000', '--reg-locals', '--insn-switches', path('tools', 'ppu_switches.json'),
+        '--hle-hooks', path('tools', 'ppu_hle_hooks.json'), '-o', out])
     return f"{len([f for f in os.listdir(out) if f.endswith(('.c', '.cpp'))])} source files"
 
 
@@ -329,6 +332,30 @@ def copy_runtime_dlls(env, build):
     print(f'  {n} runtime DLLs beside {EXE}', flush=True)
 
 
+def pgo_args(env):
+    """The kit's PPU profile (deps/pgo, pack_kit.py --pgo; made by scripts/windows/pgo-ppu.ps1): the lifted PPU code
+    compiled with it (cmake/AscensionPgo.cmake; ~10 % shorter frames on 4 cores in the developers' A/B). Only when the
+    lift here has exactly the files the profile was trained on (ppu.json: SHA-256 each) and this Visual Studio's
+    llvm-profdata reads it: else the build goes without it, never fails for it. (args, why)."""
+    off = ['-DASCENSION_PPU_PGO=OFF']
+    d = path('deps', 'pgo')
+    prof, meta = os.path.join(d, 'ppu.profdata'), os.path.join(d, 'ppu.json')
+    if not WINDOWS or not (os.path.isfile(prof) and os.path.isfile(meta)):
+        return off, 'no PGO profile in the kit'
+    try:
+        want = json.load(open(meta))['files']
+    except (OSError, ValueError, KeyError):
+        return off, 'the PGO profile has no readable ppu.json'
+    src = path('src', 'recomp')
+    have = sorted(f for f in os.listdir(src) if f.startswith('ppu_recomp') and f.endswith(('.cpp', '.h')))
+    if have != sorted(want) or any(sha256_file(os.path.join(src, f)) != want[f] for f in have):
+        return off, 'the PPU lift here is not the one the PGO profile was trained on'
+    profdata = shutil.which('llvm-profdata', path=env.get('PATH'))
+    if not profdata or subprocess.run([profdata, 'show', prof], capture_output=True).returncode != 0:
+        return off, "this Visual Studio's llvm-profdata cannot read the PGO profile"
+    return ['-DASCENSION_PPU_PGO=USE', f'-DASCENSION_PPU_PROFILE={prof}'], 'PPU code profile-guided (PGO)'
+
+
 def step_compile(a, kit):
     env = build_env()
     build = path('build', PLATFORM)
@@ -341,6 +368,10 @@ def step_compile(a, kit):
     # and idempotent, so it runs every time (the ppu step may have been skipped); Windows only, as its helper
     if WINDOWS:
         run([sys.executable, path('tools', 'patch_43D17C_guard.py'), path('src', 'recomp')])
+        # after the guard: the profile was trained on the patched code
+        pgo, why = pgo_args(env)
+        print(f'  {why}', flush=True)
+        run([tool(env, 'cmake'), '-S', ROOT, '-B', build] + pgo, env=env)
     run([tool(env, 'ninja'), '-C', build, '-j', str(a.jobs)], env=env)
     exe = os.path.join(build, EXE)
     if not os.path.isfile(exe):
@@ -358,7 +389,8 @@ def inputs(step, a, kit):
     if step == 'meta':
         return elf + tools + tree_hash([path('tools', 'extract_spu_pm.py')])
     if step == 'ppu':
-        return tree_hash([path('meta', 'functions.json'), path('meta', 'EBOOT.imports.json'), path('tools', 'ppu_switches.json')]) + elf + tools
+        return tree_hash([path('meta', 'functions.json'), path('meta', 'EBOOT.imports.json'), path('tools', 'ppu_switches.json'),
+                          path('tools', 'ppu_hle_hooks.json')]) + elf + tools
     if step == 'spu':
         return (tree_hash([path('meta', 'spu'), path('input', 'jobmods'), path('tools', 'jobmods_extra_funcs.json'),
                            path('tools', 'job_fragments.json'), os.path.join(kit, 'libs', 'spu_hle', 'gowa_post', 'native_functions.txt'),
