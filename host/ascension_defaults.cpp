@@ -177,6 +177,14 @@ struct AscensionDefaults {
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
+        // ... at above-normal priority. On 4 cores / 8 threads the RSX sat
+        // ~32 ms of a 90 ms frame waiting for the PPU to hand over the next
+        // frame (RSX_FIFO_TIMELOG): the PPU woke late from its SPU waits among
+        // ~11 busy threads. In-run A/B, first level: 4 cores -5.3 ms a frame
+        // (+1.3 fps) against a null run's -2.1 (that null still carried the
+        // RSX-wait bias fixed with CAUSAL_KEEP_DEFAULTS), 16 threads -0.6 ms;
+        // no hang (2026-11-04, ps3kit docs/ASCENSION_PLAN.md S6).
+        set_default("PS3_PPU_PRIO", "1");
         // The main thread's usleep(30) poll of the frame counter (0x99AAC4,
         // lr 0x3E8378, ~5800 a second, each a 30 us spin) waits for an SPU's
         // write to it instead. Menu: main thread 86 -> 69 % of a core, fps
