@@ -26,7 +26,13 @@ param(
     [int]$TrainSeconds = 330,
     [int]$FlushSeconds = 300,
     [switch]$MetaOnly,                # only (re)write build\pgo\<Name>\ppu.json from today's src\recomp
-    [switch]$Spu                      # also the lifted SPU code and the runtime library (ASCENSION_PGO_SPU)
+    [switch]$Spu,                     # also the lifted SPU code and the runtime library (ASCENSION_PGO_SPU)
+    # With -Spu: SPU job replays merged into the profile (work\edge_cases sets). The
+    # instrumented SPU code runs the game at ~5 fps, and the timed presses of
+    # -Level then lost the way before the level (pgo2): the replays run exactly the
+    # level's jobs (module 218's level9/l73e0h, module 202's m202).
+    [string[]]$ReplaySets = @("level9", "l73e0h", "m202"),
+    [int]$ReplayRuns = 10
 )
 # Not "Stop": vcvars64.bat prints a harmless "vswhere.exe is not recognized" on
 # stderr, which Windows PowerShell 5.1 turns into a terminating error under
@@ -110,8 +116,20 @@ try {
     if (-not (Select-String -LiteralPath $gameLog -Pattern '\[pgo\] profile write completed: result=0')) { throw "The profile was not written (no '[pgo] profile write completed: result=0')." }
     if (-not (Test-Path -LiteralPath $raw) -or (Get-Item -LiteralPath $raw).Length -eq 0) { throw "The profile file is missing or empty." }
 
-    Write-Host "[3/4] merging the profile..."
-    & $profdata merge $raw -o $merged 2>&1 | Out-File -Encoding utf8 (Join-Path $logDir "$Name-merge.log")
+    $raws = @($raw)
+    if ($Spu) {
+        foreach ($s in $ReplaySets) {
+            $r = Join-Path $caseDir "replay-$s.profraw"
+            Write-Host "  replay $s x $ReplayRuns for the profile..."
+            & (Join-Path $PSScriptRoot "replay.ps1") -Sets $s -Runs $ReplayRuns -Name "$Name-train" -TimeoutSec 900 `
+                -Env @{ LLVM_PROFILE_FILE = $r } | Out-Null
+            if ((Test-Path -LiteralPath $r) -and (Get-Item -LiteralPath $r).Length -gt 0) { $raws += $r }
+            else { Write-Host "  (no profile from the $s replay)" }
+        }
+    }
+
+    Write-Host "[3/4] merging the profile ($($raws.Count) parts)..."
+    & $profdata merge @raws -o $merged 2>&1 | Out-File -Encoding utf8 (Join-Path $logDir "$Name-merge.log")
     if ($LASTEXITCODE -ne 0) { throw "llvm-profdata merge failed: build\logs\$Name-merge.log" }
     & $profdata show $merged 2>&1 | Out-File -Encoding utf8 (Join-Path $logDir "$Name-profile-summary.txt")
     Write-PgoMeta $caseDir
