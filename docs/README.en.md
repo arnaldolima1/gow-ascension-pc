@@ -31,7 +31,7 @@ November 2026, on Windows (and on the Mac, for testing):
 
 - **The whole game, from boot to the end:** iSamigor finished it. In our own tests: intro screens, loading, first-use menus, the opening cinematic (picture and sound in sync), the main menu, the first level with Kratos in chains and the first boss fight.
 - **Two renderers:** [RPCS3](https://github.com/RPCS3/rpcs3)'s RSX (Vulkan or OpenGL), which draws the game correctly, and the project's own *live draw* (D3D12).
-- **A launcher** in English, Portuguese and Spanish, with video (including turning off effects such as depth of field, motion blur and MLAA, still experimental), controls, language, subtitles and mods; **Brazilian Portuguese**, voices and text, built from your own US disc.
+- **A launcher** in English, Portuguese and Spanish, with video (including turning off effects such as depth of field, motion blur and MLAA, still experimental), controls, language, subtitles, improvements and the **online** with your account from the site; **Brazilian Portuguese** voices and text, built on the [site](https://gow-ascension.com.br/en/pt-br) from your own discs.
 
 The November changes are on the [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) branch until they are measured on Windows. No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
 
@@ -69,7 +69,7 @@ On a Ryzen 7 9800X3D with an RX 9070 XT (RPCS3's RSX, Vulkan), the game reaches 
 
 ### Online multiplayer (in development)
 
-The game's original servers still work for players on a PS3, but the recompiled game does not sign in to PSN. So the project is writing its own server (in Rust, still private), and the runtime sends the names the game looks up to it. The server never poses as Sony: it answers only what the game expects, read in the translated code or in captures of the game talking to it. The match itself goes straight between the players (a P2P mesh over UDP, with the game's own netcode); the server handles the account, the configuration, the profile and the matchmaking.
+The game's original servers still work for players on a PS3, but the recompiled game does not sign in to PSN. So the project has its own server (in Rust, still private), live at [gow-ascension.com.br](https://gow-ascension.com.br) with sign-up closed for now; the runtime sends it the names the game looks for. The server never poses as Sony: it answers only what the game expects, read from the translated code or from captures of the game itself talking to it. The match uses the game's own netcode (a P2P mesh over UDP); since two players at home can hardly ever reach each other directly (each behind their router), the packets go through a relay on the server, and the game does not notice.
 
 | Step | State |
 | --- | --- |
@@ -79,43 +79,47 @@ The game's original servers still work for players on a PS3, but the recompiled 
 | Tutorial skipped, warrior lobby | ok |
 | Quick match: the player's location | ok |
 | Quick match: picking the matchmaking server | ok |
-| Connecting to matchmaking (the game opens an SSL 3.0 session) | **in progress** |
-| Lobby with other players, the match | to do |
+| Connecting to matchmaking (SSL 3.0 session) | ok |
+| Two players matched into one game, one of them host | ok (two games on one PC) |
+| The match's network through the server's relay | ok (two games on one PC) |
+| Launcher: signing in and playing online | ok |
+| A match between two PCs over the internet | **in progress** |
+| The whole match, from the lobby to the end | to do |
 
 ```mermaid
 flowchart LR
   subgraph PC["Player's PC"]
-    L["Launcher<br/>account and online options"]
+    L["Launcher<br/>account and online"]
     G["Recompiled game<br/>(ps3kit runtime)"]
-    L -- "environment variables" --> G
+    L -- "address, configuration and profile" --> G
   end
 
   subgraph SRV["Project server (Rust)"]
-    DNS["DNS<br/>game names → our server"]
+    API["Accounts and API"]
     CFG["Online configuration"]
     TUS["Multiplayer profile<br/>per account"]
     GEO["Location"]
-    SAM["Matchmaking<br/>(SSL 3.0, in progress)"]
-    API["Accounts and API"]
+    SAM["Matchmaking<br/>(SSL 3.0)"]
+    REL["Signaling and relay<br/>(UDP)"]
     DB[("PostgreSQL")]
     TUS --> DB
     API --> DB
   end
 
-  WEB["Project site<br/>profile, ranking, admin"]
+  WEB["Project site<br/>profile, ranking, panel"]
   G2["Another player's game"]
 
-  G -- "DNS (UDP)" --> DNS
-  G -- "configuration" --> CFG
-  G -- "profile" --> TUS
+  L -- "sign-in by code" --> API
+  L -- "configuration, profile" --> CFG
+  L -- "profile" --> TUS
   G -- "TCP" --> GEO
   G -- "TCP + SSL" --> SAM
-  L -- "login by code" --> API
+  G <-- "match (UDP)" --> REL
+  REL <-- "match (UDP)" --> G2
   WEB -- "HTTP" --> API
-  G <-.->|"P2P match (UDP)"| G2
 ```
 
-Already working on the server and the site (locally only, nothing published): accounts, the multiplayer profile kept per account, the public profile with level and achievements, the ranking (empty until there are matches) and an admin panel. Planned: the launcher signing in with a code, like a TV, and the game's trophies signed and checked by the server. **"Play offline" will always keep working**: the campaign will never ask for an account.
+Live on the server and the site: accounts, the multiplayer profile kept per account, the public profile with level and achievements, the ranking (empty until there are matches), an admin panel and the launcher's sign-in by code. Planned: the game's trophies signed and checked by the server. **"Play offline" will always keep working**: the campaign will never ask for an account.
 
 ## Playing
 
@@ -129,11 +133,11 @@ PLAY starts the game; the launcher hides until it closes.
 - **Controls:** tabs for keyboard and mouse (two keys per control: click one and press the new key) and for the controller (which button does what, dead zone). Default: WASD walks, the arrows evade, Space/J/I/L or the mouse for the face buttons, Shift blocks, Esc or Enter pauses. Keyboard, mouse and controller all work at once.
 - **Launcher** in several languages; Automatic follows the game's language.
 - **Game:** language (English, Portuguese, Spanish, French, German, Italian, Russian, Polish, Turkish) and subtitles, which hold after the first start too; automatic save backups.
-- **Mods:** turn them on and off, and order them. **Skip intro** comes with it (straight to the loading screen, no intro screens); **Create PT-BR mod** builds Brazilian Portuguese from your US disc image. The included mods are recipes the launcher applies to your own disc's files; none carries anything from the game.
+- **Improvements:** turn them on and off. **Skip intro** comes with it (straight to the loading screen, no intro screens); **Open the improvements folder** is where the others go, such as **Brazilian Portuguese**, which the [site's page](https://gow-ascension.com.br/en/pt-br) builds in your browser from your own disc images (nothing is uploaded). The included improvements are recipes: the launcher applies them to your disc's files, carrying nothing from the game.
+- **Online:** signs in to your account from the site with a code (as on a TV) and turns the online on; the game's trophies are on the same tab.
 
 <p align="center"><img src="images/launcher/launcher-controls.en.jpg" alt="The controls page" width="760"></p>
 
-<p align="center"><img src="images/launcher/launcher-mods.en.jpg" alt="The mods page" width="760"></p>
 
 ## Building
 

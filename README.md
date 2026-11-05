@@ -31,7 +31,7 @@ Novembro de 2026, no Windows (e no Mac, em testes):
 
 - **O jogo inteiro, do boot ao fim:** o iSamigor zerou o jogo. Nos nossos testes: telas de abertura, carregamento, menus de primeiro uso, cinemática de abertura (imagem e som sincronizados), menu principal, o primeiro nível com o Kratos acorrentado e a primeira luta contra um chefe.
 - **Dois renderizadores:** o RSX do [RPCS3](https://github.com/RPCS3/rpcs3) (Vulkan ou OpenGL), que desenha o jogo corretamente, e o *live draw* próprio do projeto (D3D12).
-- **Launcher** em português, inglês e espanhol, com vídeo (incluindo desligar efeitos como desfoque de profundidade, motion blur e MLAA, ainda experimental), controles, idioma, legendas e mods; **português do Brasil** com vozes e textos, montado a partir do seu disco americano.
+- **Launcher** em português, inglês e espanhol, com vídeo (incluindo desligar efeitos como desfoque de profundidade, motion blur e MLAA, ainda experimental), controles, idioma, legendas, melhorias e o **online** com a sua conta do site; **português do Brasil** com vozes e textos, montado no [site](https://gow-ascension.com.br/pt-br) a partir dos seus discos.
 
 As mudanças de novembro estão no branch [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) até serem medidas no Windows. Ainda não há release. Os marcos estão em [docs/MILESTONES.pt-BR.md](docs/MILESTONES.pt-BR.md) (em inglês: [MILESTONES.md](docs/MILESTONES.md)).
 
@@ -69,7 +69,7 @@ Num Ryzen 7 9800X3D com uma RX 9070 XT (RSX do RPCS3, Vulkan), o jogo chega a 60
 
 ### Multijogador online (em desenvolvimento)
 
-Os servidores originais do jogo ainda funcionam para quem joga no PS3, mas o jogo recompilado não entra na PSN. Por isso o projeto está escrevendo o próprio servidor (em Rust, ainda privado), e o runtime manda para ele os nomes que o jogo procura. O servidor nunca se passa pela Sony: ele responde só o que o jogo espera, lido no código traduzido ou nas capturas do próprio jogo falando com ele. A partida em si vai direto entre os jogadores (uma malha P2P por UDP, com o netcode do próprio jogo); o servidor cuida da conta, da configuração, do perfil e do matchmaking.
+Os servidores originais do jogo ainda funcionam para quem joga no PS3, mas o jogo recompilado não entra na PSN. Por isso o projeto tem o próprio servidor (em Rust, ainda privado), no ar em [gow-ascension.com.br](https://gow-ascension.com.br) com o cadastro fechado por enquanto; o runtime manda para ele os nomes que o jogo procura. O servidor nunca se passa pela Sony: ele responde só o que o jogo espera, lido no código traduzido ou nas capturas do próprio jogo falando com ele. A partida usa o netcode do próprio jogo (uma malha P2P por UDP); como dois jogadores em casa quase nunca se alcançam direto (cada um atrás do seu roteador), os pacotes passam por um relay do servidor, e o jogo nem percebe.
 
 | Passo | Estado |
 | --- | --- |
@@ -79,24 +79,28 @@ Os servidores originais do jogo ainda funcionam para quem joga no PS3, mas o jog
 | Tutorial pulado, lobby do guerreiro | ok |
 | Partida rápida: localização do jogador | ok |
 | Partida rápida: escolha do servidor de matchmaking | ok |
-| Conexão com o matchmaking (o jogo abre uma sessão SSL 3.0) | **em andamento** |
-| Lobby com outros jogadores, a partida | falta |
+| Conexão com o matchmaking (sessão SSL 3.0) | ok |
+| Dois jogadores casados numa partida, um deles host | ok (dois jogos no mesmo PC) |
+| A rede da partida pelo relay do servidor | ok (dois jogos no mesmo PC) |
+| Launcher: entrar na conta e jogar online | ok |
+| Partida entre dois PCs pela internet | **em andamento** |
+| A partida inteira, do lobby ao fim | falta |
 
 ```mermaid
 flowchart LR
   subgraph PC["PC do jogador"]
-    L["Launcher<br/>conta e opções do online"]
+    L["Launcher<br/>conta e online"]
     G["Jogo recompilado<br/>(runtime ps3kit)"]
-    L -- "variáveis de ambiente" --> G
+    L -- "endereço, configuração e perfil" --> G
   end
 
   subgraph SRV["Servidor do projeto (Rust)"]
-    DNS["DNS<br/>nomes do jogo → nosso servidor"]
+    API["Contas e API"]
     CFG["Configuração do online"]
     TUS["Perfil do multijogador<br/>por conta"]
     GEO["Localização"]
-    SAM["Matchmaking<br/>(SSL 3.0, em andamento)"]
-    API["Contas e API"]
+    SAM["Matchmaking<br/>(SSL 3.0)"]
+    REL["Signaling e relay<br/>(UDP)"]
     DB[("PostgreSQL")]
     TUS --> DB
     API --> DB
@@ -105,17 +109,17 @@ flowchart LR
   WEB["Site do projeto<br/>perfil, ranking, painel"]
   G2["Jogo de outro jogador"]
 
-  G -- "DNS (UDP)" --> DNS
-  G -- "configuração" --> CFG
-  G -- "perfil" --> TUS
+  L -- "login por código" --> API
+  L -- "configuração, perfil" --> CFG
+  L -- "perfil" --> TUS
   G -- "TCP" --> GEO
   G -- "TCP + SSL" --> SAM
-  L -- "login por código" --> API
+  G <-- "partida (UDP)" --> REL
+  REL <-- "partida (UDP)" --> G2
   WEB -- "HTTP" --> API
-  G <-.->|"partida P2P (UDP)"| G2
 ```
 
-Já funcionam no servidor e no site (só localmente, nada publicado): as contas, o perfil do multijogador guardado por conta, o perfil público com nível e conquistas, o ranking (vazio até haver partidas) e um painel administrativo. Planejado: o launcher entrar na conta por um código, como numa TV, e os troféus do jogo assinados e conferidos pelo servidor. **"Jogar offline" vai continuar sempre funcionando**: a campanha nunca vai pedir conta.
+No ar no servidor e no site: as contas, o perfil do multijogador guardado por conta, o perfil público com nível e conquistas, o ranking (vazio até haver partidas), um painel administrativo e o login do launcher por código. Planejado: os troféus do jogo assinados e conferidos pelo servidor. **"Jogar offline" vai continuar sempre funcionando**: a campanha nunca vai pedir conta.
 
 ## Jogando
 
@@ -129,11 +133,11 @@ JOGAR abre o jogo; o launcher se esconde até ele fechar.
 - **Controles:** abas para teclado e mouse (duas teclas por comando, clique e aperte a nova) e para o controle (qual botão faz cada um, zona morta). Padrão: WASD anda, setas esquivam, Espaço/J/I/L ou o mouse nos botões, Shift defende, Esc ou Enter pausa. Teclado, mouse e controle funcionam juntos.
 - **Launcher** em vários idiomas; o automático segue o idioma do jogo.
 - **Jogo:** idioma (inglês, português, espanhol, francês, alemão, italiano, russo, polonês, turco) e legendas, que valem mesmo depois do primeiro uso; backup automático dos saves.
-- **Mods:** liga, desliga e ordena. Vem com **Pular intro** (direto ao carregamento, sem as telas de abertura); o botão **Criar mod PT-BR** monta o português do Brasil a partir da imagem do seu disco americano. Os mods incluídos são receitas: o launcher as aplica aos arquivos do seu disco, sem trazer nada do jogo.
+- **Melhorias:** liga e desliga. Vem com **Pular intro** (direto ao carregamento, sem as telas de abertura); o botão **Abrir a pasta de melhorias** é onde entram as outras, como o **português do Brasil**, que a [página do site](https://gow-ascension.com.br/pt-br) monta no seu navegador a partir das imagens dos seus discos (nada é enviado). As melhorias incluídas são receitas: o launcher as aplica aos arquivos do seu disco, sem trazer nada do jogo.
+- **Online:** entra na sua conta do site por um código (como numa TV) e liga o online; os troféus do jogo ficam na mesma aba.
 
 <p align="center"><img src="docs/images/launcher/launcher-controls.pt.jpg" alt="A página de controles" width="760"></p>
 
-<p align="center"><img src="docs/images/launcher/launcher-mods.pt.jpg" alt="A página de mods" width="760"></p>
 
 ## Compilando
 
