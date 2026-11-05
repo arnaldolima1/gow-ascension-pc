@@ -419,6 +419,10 @@ else()
         COMPILE_OPTIONS "-w;-ffp-contract=off;-fno-math-errno")
 endif()
 
+# PPU-only profile-guided optimization: ASCENSION_PPU_PGO=OFF (default, flags
+# unchanged) / GENERATE / USE (scripts\windows\pgo-ppu.ps1, docs/PPU_PGO.md).
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AscensionPgo.cmake")
+
 # ---------------------------------------------------------------------------
 # rrc_replay: draws an RPCS3 frame capture (.rrc) with the live-draw engine,
 # so a frame can be compared with RPCS3 on identical inputs. A dev tool, not
