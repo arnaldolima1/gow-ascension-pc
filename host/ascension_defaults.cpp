@@ -162,7 +162,13 @@ struct AscensionDefaults {
         set_default("GCM_ROUND_GATE", "9BAC30");
         set_default("GCM_ROUND_RING", "io:1ED00,18");
         set_default("SPURS_READY_LEVEL", "1");
-        set_default("SPURS_MAXCONT", "3=5,13=3,15=5,16=5,17=5");
+        // wid 9-12 (RenJobSet: modules 217, 225, 201, 227) up to four/five
+        // SPUs: the main thread's frame waits on a scheduler item those lists
+        // bring to zero, and with one SPU each they ran strictly in turn
+        // (~6.5 ms a frame). In-run A/B, first level, 4 cores / 8 threads:
+        // -2.11 ms a frame (+0.6 fps), no hang (2026-11-04, ps3kit
+        // docs/ASCENSION_PLAN.md S9; first measured 2026-10-30, 19 -> 20-21 fps).
+        set_default("SPURS_MAXCONT", "3=5,9=4,10=4,11=4,12=5,13=3,15=5,16=5,17=5");
         set_default("SPURS_IDLE_BACKOFF_MAX", "0");
         // SPU n on physical core n + 1, alone: its contexts' local stores and
         // lifted code stay in that core's caches. First level ~14.8 -> ~15.6
