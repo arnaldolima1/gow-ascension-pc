@@ -73,6 +73,24 @@ endif()
 list(LENGTH RECOMP_SOURCES RECOMP_SOURCE_COUNT)
 message(STATUS "Lifted sources:  ${RECOMP_SOURCE_COUNT} file(s)")
 
+# The streaming table's PPU/SPU hand-off (docs/TEXSTREAM_SYNC.md): a build-local
+# copy of PPU chunk 006 with a guard call at five function entries (the lift is
+# left as it is). The guard acts with GOWA_TEXSTREAM_SYNC=1 (host/texstream_sync.cpp).
+# --fallback: a lift whose chunk 006 is not the expected one builds unguarded.
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+set(TEXSTREAM_SOURCE "${RECOMP_DIR}/ppu_recomp_006.cpp")
+if(EXISTS "${TEXSTREAM_SOURCE}")
+    set(TEXSTREAM_GUARDED "${CMAKE_CURRENT_BINARY_DIR}/texstream/ppu_recomp_006.cpp")
+    add_custom_command(
+        OUTPUT "${TEXSTREAM_GUARDED}"
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_texstream_sync.py"
+                "${TEXSTREAM_SOURCE}" "${TEXSTREAM_GUARDED}" --fallback
+        DEPENDS "${TEXSTREAM_SOURCE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_texstream_sync.py"
+        COMMENT "Guarding the streaming-table PPU/SPU hand-off (chunk 006)")
+    list(REMOVE_ITEM RECOMP_SOURCES "${TEXSTREAM_SOURCE}")
+    list(APPEND RECOMP_SOURCES "${TEXSTREAM_GUARDED}")
+endif()
+
 # ---------------------------------------------------------------------------
 # ps3recomp runtime library
 # ---------------------------------------------------------------------------
@@ -182,6 +200,7 @@ add_executable(${PROJECT_NAME}
     # Runtime switches this title needs on by default (live draw engine,
     # host Edge Zlib).
     "${CMAKE_CURRENT_SOURCE_DIR}/host/ascension_defaults.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/texstream_sync.cpp"
     # The game's stripped debug printf, printed with GOWA_GAMELOG=1.
     "${CMAKE_CURRENT_SOURCE_DIR}/host/game_log.cpp"
     ${PS3RECOMP_SCAFFOLD}
