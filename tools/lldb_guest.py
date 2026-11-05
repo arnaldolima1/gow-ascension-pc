@@ -13,6 +13,10 @@ PPU functions show as func_<EA>, SPU code as jobmod_<hash>_e<entry>_spu_func_<LS
 as mfc_do_transfer under the job's function). The runtime's own page faults (EXC_BAD_ACCESS in
 func_0040CE58 and others) are continued and counted.
 
+Careful: with the RPCS3 RSX (PS3_RSX=rpcs3) the guest memory is RPCS3's vm at 0xb00000000, not
+VM_BASE (pass the base you need), and stopping the process even briefly can kill the game (RSX
+write faults after the detach, 2026-11-05): read what you need in one attach.
+
 A running SPU_JOBCAP capture can be pointed elsewhere with lldb expressions on the statics of
 ps3kit runtime/spu/spu_jobcap.c (s_dir, s_ovl, s_entry, s_ovl2, s_entry2, s_max, s_after_us,
 s_skip, then s_jobs = 0 last), e.g. module 217 = `*(int*)&s_ovl = 217`, `*(unsigned*)&s_entry =
