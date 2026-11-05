@@ -233,6 +233,15 @@ if(SPU_SOURCES)
     if(NOT ASCENSION_SPU_LS_HOOKS)
         string(APPEND SPU_DEFS ";SPU_LS_NO_HOOKS")
     endif()
+    # SPU_WRCH_INLINE: an MFC command's parameter writes (LSA, EAH, EAL, size,
+    # tag, tag mask) are stores into the context, not calls to spu_wrch, which
+    # did only that store with them (spu_helpers.h). otavix010's port of this
+    # game measured +3.2 % for the same change. Same result by construction;
+    # only SPU_CHHIST stops counting those writes. ps3kit docs/ASCENSION_PLAN.md 2b.6.
+    option(ASCENSION_SPU_WRCH_INLINE "Lifted SPU code stores MFC parameters without calling spu_wrch" ON)
+    if(ASCENSION_SPU_WRCH_INLINE)
+        string(APPEND SPU_DEFS ";SPU_WRCH_INLINE")
+    endif()
     set_source_files_properties(${SPU_SOURCES} PROPERTIES
         INCLUDE_DIRECTORIES "${PS3RECOMP_DIR}/runtime/spu"
         # SPU_ASSUME_SPU_FP: lifted code always runs in the SPU float mode
