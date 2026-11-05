@@ -138,7 +138,15 @@ if ($Affinity) {
     if ($game) { $game.ProcessorAffinity = [IntPtr][Convert]::ToInt64($Affinity, 16); Write-Host "affinity 0x$Affinity" }
 }
 Start-Sleep -Seconds 2
-$game = Get-Process AscensionRecomp -ErrorAction SilentlyContinue | Sort-Object StartTime -Descending | Select-Object -First 1
+# Up to 60 s for the process to show: a large executable (a PGO training
+# build) took longer than the 2 s above, and the run then returned at once,
+# leaving the game running unwatched.
+for ($i = 0; $i -lt 116; $i++) {
+    $game = Get-Process AscensionRecomp -ErrorAction SilentlyContinue | Sort-Object StartTime -Descending | Select-Object -First 1
+    if ($game -or $p.HasExited) { break }
+    Start-Sleep -Milliseconds 500
+}
+if (-not $game) { Write-Host "the game process never showed (log: $Log)" }
 if ($Profile -and $game) {
     $wait = $ProfileAt - ((Get-Date) - $t0).TotalSeconds
     if ($wait -gt 0) { Start-Sleep -Seconds $wait }
