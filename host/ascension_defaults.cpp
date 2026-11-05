@@ -179,7 +179,28 @@ struct AscensionDefaults {
         // shares those cores' caches. 46.6 -> 48.3/48.8 fps (two runs of 13-14
         // gameplay windows each). Pinning anything else the same way loses:
         // 13:4-5;3,8,9,10,14:4-5 -> 44.5, 13:4-5;11,12:4-5 -> 46.8.
+        // With 12 logical CPUs or more, a 7th SPU that the Wws job manager
+        // sees as SPU 3 (a job list has progress lanes for six) takes
+        // RenJobSet (wid 9-12) off SPU 3. Whole PC (16 threads), in-run A/B,
+        // first level: -1.05 ms a frame (quartiles -2.21 / -0.65), +0.65 fps;
+        // wid 13 on the 7th too gave the same. Below 12 a 7th SPU thread only
+        // competes for the cores (otavix010 saw the same). 2026-11-05, ps3kit
+        // docs/ASCENSION_PLAN.md S14 A1/A2. Placed before the plain lanes so
+        // they do not win.
+        if (logical_cpus() >= 12) {
+            set_default("SPURS_NSPUS", "7");
+            set_default("SPURS_SPU_ALIAS", "6:3");
+            set_default("SPURS_WID_LANES", "9-12:0-2,4-6;13:4-5");
+        }
         set_default("SPURS_WID_LANES", "13:4-5");
+        // MFC commands without the full path's diagnostic switches (spu_dma.h).
+        // In-run A/B, first level: whole PC -0.88 ms a frame (quartiles -1.26 /
+        // -0.46), 4 cores / 8 threads -1.34 ms (-1.97 / -1.13). S14 A3/A4.
+        set_default("SPU_DMA_LEAN", "1");
+        // The Wws interrupt handler's register save/restore stubs at LS 0x3FEC0
+        // decoded once a thread, not word by word every interrupt: whole PC
+        // -0.43 ms a frame (quartiles -0.91 / -0.21), 0 refused. S14 A6.
+        set_default("SPU_SMC_FAST", "1");
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
