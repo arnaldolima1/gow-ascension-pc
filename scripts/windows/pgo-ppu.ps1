@@ -25,7 +25,8 @@ param(
     [ValidateSet("", "base", "pgo")][string]$Swap = "",
     [int]$TrainSeconds = 330,
     [int]$FlushSeconds = 300,
-    [switch]$MetaOnly                 # only (re)write build\pgo\<Name>\ppu.json from today's src\recomp
+    [switch]$MetaOnly,                # only (re)write build\pgo\<Name>\ppu.json from today's src\recomp
+    [switch]$Spu                      # also the lifted SPU code and the runtime library (ASCENSION_PGO_SPU)
 )
 # Not "Stop": vcvars64.bat prints a harmless "vswhere.exe is not recognized" on
 # stderr, which Windows PowerShell 5.1 turns into a terminating error under
@@ -86,7 +87,8 @@ $merged = Join-Path $caseDir "ppu.profdata"
 
 function Set-PgoMode([string]$Mode, [string]$Extra = "") {
     $log = Join-Path $logDir "$Name-configure-$Mode.log"
-    cmd /c "`"$($Cfg.VCVARS)`" >nul && cmake -S `"$Root`" -B `"$buildDir`" -DASCENSION_PPU_PGO=$Mode $Extra" 2>&1 | Out-File -Encoding utf8 $log
+    $spuFlag = if ($Spu -and $Mode -ne "OFF") { "-DASCENSION_PGO_SPU=ON" } else { "-DASCENSION_PGO_SPU=OFF" }
+    cmd /c "`"$($Cfg.VCVARS)`" >nul && cmake -S `"$Root`" -B `"$buildDir`" -DASCENSION_PPU_PGO=$Mode $spuFlag $Extra" 2>&1 | Out-File -Encoding utf8 $log
     if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $log -Tail 15; throw "cmake ($Mode) failed: $log" }
 }
 
