@@ -6,10 +6,11 @@
 #   .\scripts\windows\relift.ps1 fragments                     # tools\job_fragments.json -> src\spu\pic_*
 #   .\scripts\windows\relift.ps1 fragments -Only 0x71c310       # one fragment (EAs, comma-separated): only it recompiles
 #   .\scripts\windows\relift.ps1 post                          # SPU image 2 (the post-process round), with its stage hooks
+#   .\scripts\windows\relift.ps1 images                        # all SPU images (policy module, tasks) as setup.py, then post
 #
 # Extra entries per module: tools\jobmods_extra_funcs.json. Run .\scripts\windows\build.ps1 after.
 param(
-    [Parameter(Mandatory)][ValidateSet("ppu", "jobmods", "fragments", "post")][string]$What,
+    [Parameter(Mandatory)][ValidateSet("ppu", "jobmods", "fragments", "post", "images")][string]$What,
     [string]$Only = ""
 )
 
@@ -67,6 +68,16 @@ if ($What -eq "ppu") {
         python (Join-Path $Tools "lift_jobmods.py") --jobmods $mods --out $Spu --register (Join-Path $Spu "jobmods_register.c") `
             --symbol-prefix ascension --extra-funcs-json (Join-Path $Root "tools\jobmods_extra_funcs.json") 2>&1 | Tee-Object $Log
     }
+} elseif ($What -eq "images") {
+    # The SPU images (meta\spu: the Wws policy module, the tasks, image 2) as
+    # tools\setup.py lifts them for the players. This PC's had been lifted on
+    # 2026-10-17, before SPU_DIRECT: the policy module's branches went through
+    # the drain loop (105 steps an interrupt, 16 after). Image 2 is relifted
+    # with its native stages right after (as relift.ps1 post).
+    python (Join-Path $Tools "build_spu_workloads.py") --images (Join-Path $Root "meta\spu") --lifted $Spu `
+        --out (Join-Path $Spu "spu_workloads.c") --register-fn ascension_spu_register_all --constructor `
+        --title ascension --relift --extra-funcs "spu_wws_pm_at_0077CA80=0xA2C,0xA68,0x3368,0x3378" 2>&1 | Tee-Object $Log
+    & (Join-Path $PSScriptRoot "relift.ps1") post
 } elseif ($What -eq "post") {
     # The post-process round's image: its stage functions come through ps3kit
     # libs\spu_hle\gowa_post (capture, bench, native versions).
