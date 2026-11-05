@@ -20,7 +20,7 @@
 Ascension translates the game's code, for the PS3's main processor (PPU) and its SPUs, into C++ and compiles it for your PC, on top of the [ps3recomp](https://github.com/sp00nznet/ps3recomp) runtime. It is not an emulator: it is the game itself, recompiled.
 
 > [!WARNING]
-> **An experiment: not playable from start to finish yet.** The game reaches the first level and the first boss fight, but slowly (~18-23 fps in the level, 13-21 in the fight). Made for Windows; on macOS (Apple Silicon) it runs again, for testing only so far.
+> **An experiment: not playable from start to finish yet.** The game reaches the first level and the first boss fight, but slowly (~24 fps in the level, 13-21 in the fight). Made for Windows; on macOS (Apple Silicon) it runs again, for testing only so far.
 
 > [!IMPORTANT]
 > **No game data is included.** You need your own copy, the **European release `BCES-01741`** (1.00), taken from your disc. Nobody here can give you the game or keys. A fan project, not affiliated with Sony Interactive Entertainment or Santa Monica Studio.
@@ -31,13 +31,91 @@ November 2026, on Windows (and on the Mac, for testing):
 
 - **From boot to the first boss fight:** intro screens, loading, first-use menus, the opening cinematic (picture and sound in sync), the main menu, the first level with Kratos in chains and the first boss fight.
 - **Two renderers:** [RPCS3](https://github.com/RPCS3/rpcs3)'s RSX (Vulkan or OpenGL), which draws the game correctly, and the project's own *live draw* (D3D12).
-- **Performance:** the main menu runs at ~50-55 fps; the first level at ~22-27 fps, depending on the scene (it was ~9); the boss fight at 13-21. In the same first-level scene RPCS3 makes 35-40 fps: that is the gap to close. In November the first level's frame was measured part by part: of its ~50 ms, ~21 ms are the SPUs' geometry lists (EDGE), ~9-12 ms the game waits on the RSX thread between that geometry's two passes, and the rest are the render jobs at the start and end of the frame. Now on by default: the RSX thread sleeps when its command queue is empty instead of spinning (~8% shorter frames on a 4-core PC), and the SPUs pick their next work themselves (~1.6% shorter on the same PC). Next: see exactly what the RSX does in that wait, and move the SPUs' geometry module to native code. Heavy SPU parts already run as native code, each checked against the original: the per-draw geometry (indices, skinning, normals and tangents) and the post-process that smooths the image's edges. These numbers are from a Ryzen 5 5600G with an RX 7600; on a Ryzen 7 9800X3D with an RX 9070 XT (RPCS3's RSX, Vulkan), the game reaches 60 fps outside fights and drops to about half in them.
-- **A freeze fixed:** the game sometimes froze in the level with the SPUs' geometry lists waiting forever. The cause was a store from the main processor lost in the middle of an SPU's atomic operation; fixed, the repro went from 3 freezes in 5 runs to none in 4.
-- **Multiplayer (in development):** with the project's own server (still private), the game already enters the multiplayer, reaches the warrior lobby and keeps the player's profile on their account. Online matches do not work yet.
-- **Known issues:** right after the creature fight, near the giant arm, an object of the area is drawn several times, each copy slightly offset (it goes away when the camera leaves); the game still sometimes hangs on an SPU job list that never finishes (`BATCHJOB: Waiting for batch job list ...`; checking whether the fix above also solves this one); and the video command queue sometimes arrives corrupted (`FIFO error: possible desync`), more often on the Mac: the RSX thread now recovers instead of freezing the game, but the cause is still open.
 - **A launcher** in English, Portuguese and Spanish, with video (including turning off effects such as depth of field, motion blur and MLAA, still experimental), controls, language, subtitles and mods; **Brazilian Portuguese**, voices and text, built from your own US disc.
 
 The November changes are on the [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) branch until they are measured on Windows. No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
+
+### Performance
+
+The goal is to run well on ordinary CPUs, not only on strong ones. First level, on a Ryzen 7 5700G (each number measured on Windows, in the same scene):
+
+| Where | Early November | Now (November 5) | RPCS3 |
+| --- | --- | --- | --- |
+| First level, whole PC (8 cores, 16 threads) | ~21-23 fps | **~24 fps** | 35-40 fps |
+| First level, 4 cores only (8 threads) | ~14-15 fps | **~17-18 fps** | |
+| Main menu | ~50-55 fps | ~50-55 fps | |
+| First boss fight | 13-21 fps | not measured again yet | |
+
+On a Ryzen 7 9800X3D with an RX 9070 XT (RPCS3's RSX, Vulkan), the game reaches 60 fps outside fights and drops to about half in them.
+
+**What paid in November** (each change measured on its own, the game switching it on and off within the same run, on a 4-core PC):
+
+- The main processor's code compiled with a profile of the game's real use (PGO): ~6 ms shorter frames (~10%). Extended to the SPU code and the runtime: ~1 ms more.
+- The game's main thread above normal priority: -2.7 ms a frame.
+- The jobs at the end of the frame spread over up to 4-5 SPUs: -2.1 ms a frame.
+- The RSX thread sleeping on an empty command queue instead of spinning: ~8% shorter; the SPUs picking their next work themselves: ~1.6% shorter.
+- More of the SPUs' geometry module (EDGE) as native code, checked against the original: its heaviest job got 28% faster.
+
+**Where the frame goes now:** the RSX is off the critical path on both test PCs (its wait between the geometry's two passes went from 9-12 ms to ~0.1 ms). The frame is now ~55% EDGE (SPU module 218), plus the render jobs at its start and end. Inside EDGE, the biggest waste found is the job manager's interrupts in the middle of each job: they cost as much as the job's own code.
+
+**Next:** shrink those interrupts, make the SPUs' list DMA lighter, redo the PGO over the new code and, later, EDGE's culling as native code (its test bench already reproduces the level's 412 recorded calls).
+
+### Stability
+
+- **Fixed:** the freeze in the level with the geometry lists waiting forever (a store from the main processor lost in the middle of an SPU's atomic operation: from 3 freezes in 5 runs to none in 4).
+- **Fixed:** the freeze with `CopyLocalMemory offset error` (an Edge Zlib counter, and the texture streaming table swapped without a guard): none in 40 level runs.
+- **Guarded:** corrupted video commands (`FIFO error: possible desync`) no longer kill the RSX thread, and a draw asking for an absurd amount of vertices is skipped instead of crashing the game. The cause of the corruption is still open.
+- **Known issues:** right after the creature fight, near the giant arm, an object of the area is drawn several times, each copy slightly offset (it goes away when the camera leaves); the game sometimes hangs on an SPU job list that never finishes (`BATCHJOB: Waiting for batch job list ...`); and twice a silent crash came ~70-105 s into the level.
+
+### Online multiplayer (in development)
+
+The game's original servers still work for players on a PS3, but the recompiled game does not sign in to PSN. So the project is writing its own server (in Rust, still private), and the runtime sends the names the game looks up to it. The server never poses as Sony: it answers only what the game expects, read in the translated code or in captures of the game talking to it. The match itself goes straight between the players (a P2P mesh over UDP, with the game's own netcode); the server handles the account, the configuration, the profile and the matchmaking.
+
+| Step | State |
+| --- | --- |
+| Going online, Online Pass | ok |
+| Online configuration (the game reads ours) | ok |
+| Terms of use, multiplayer profile kept on the account | ok |
+| Tutorial skipped, warrior lobby | ok |
+| Quick match: the player's location | ok |
+| Quick match: picking the matchmaking server | ok |
+| Connecting to matchmaking (the game opens an SSL 3.0 session) | **in progress** |
+| Lobby with other players, the match | to do |
+
+```mermaid
+flowchart LR
+  subgraph PC["Player's PC"]
+    L["Launcher<br/>account and online options"]
+    G["Recompiled game<br/>(ps3kit runtime)"]
+    L -- "environment variables" --> G
+  end
+
+  subgraph SRV["Project server (Rust)"]
+    DNS["DNS<br/>game names → our server"]
+    CFG["Online configuration"]
+    TUS["Multiplayer profile<br/>per account"]
+    GEO["Location"]
+    SAM["Matchmaking<br/>(SSL 3.0, in progress)"]
+    API["Accounts and API"]
+    DB[("PostgreSQL")]
+    TUS --> DB
+    API --> DB
+  end
+
+  WEB["Project site<br/>profile, ranking, admin"]
+  G2["Another player's game"]
+
+  G -- "DNS (UDP)" --> DNS
+  G -- "configuration" --> CFG
+  G -- "profile" --> TUS
+  G -- "TCP" --> GEO
+  G -- "TCP + SSL" --> SAM
+  L -- "login by code" --> API
+  WEB -- "HTTP" --> API
+  G <-.->|"P2P match (UDP)"| G2
+```
+
+Already working on the server and the site (locally only, nothing published): accounts, the multiplayer profile kept per account, the public profile with level and achievements, the ranking (empty until there are matches) and an admin panel. Planned: the launcher signing in with a code, like a TV, and the game's trophies signed and checked by the server. **"Play offline" will always keep working**: the campaign will never ask for an account.
 
 ## Playing
 

@@ -20,7 +20,7 @@
 O Ascension traduz o código do jogo, do processador principal (PPU) e dos SPUs do PS3, para C++ e o compila para o seu PC, sobre o runtime do [ps3recomp](https://github.com/sp00nznet/ps3recomp). Não é um emulador: é o próprio jogo, recompilado.
 
 > [!WARNING]
-> **Um experimento: ainda não dá para jogar do começo ao fim.** O jogo chega ao primeiro nível e à primeira luta contra um chefe, mas ainda lento (~18-23 fps no nível, 13-21 na luta). Feito para Windows; no macOS (Apple Silicon) ele voltou a rodar, por enquanto só para testes.
+> **Um experimento: ainda não dá para jogar do começo ao fim.** O jogo chega ao primeiro nível e à primeira luta contra um chefe, mas ainda lento (~24 fps no nível, 13-21 na luta). Feito para Windows; no macOS (Apple Silicon) ele voltou a rodar, por enquanto só para testes.
 
 > [!IMPORTANT]
 > **Nenhum dado do jogo está incluído.** Você precisa da sua própria cópia, a **versão europeia `BCES-01741`** (1.00), tirada do seu disco. Ninguém aqui pode te dar o jogo ou chaves. Projeto de fãs, sem ligação com a Sony Interactive Entertainment ou a Santa Monica Studio.
@@ -31,17 +31,91 @@ Novembro de 2026, no Windows (e no Mac, em testes):
 
 - **Do boot à primeira luta contra um chefe:** telas de abertura, carregamento, menus de primeiro uso, cinemática de abertura (imagem e som sincronizados), menu principal, o primeiro nível com o Kratos acorrentado e a primeira luta contra um chefe.
 - **Dois renderizadores:** o RSX do [RPCS3](https://github.com/RPCS3/rpcs3) (Vulkan ou OpenGL), que desenha o jogo corretamente, e o *live draw* próprio do projeto (D3D12).
-- **Desempenho:** menu principal a ~50-55 fps; o primeiro nível a ~22-27 fps, conforme a cena (era ~9); a luta contra o chefe a 13-21. Na mesma cena do primeiro nível, o RPCS3 faz 35-40 fps: é a distância que queremos vencer. Em novembro o quadro do primeiro nível foi medido parte por parte: dos ~50 ms, ~21 ms são as listas de geometria das SPUs (o EDGE), ~9-12 ms o jogo espera o thread do RSX entre as duas passadas dessa geometria, e o resto são os jobs de renderização no começo e no fim do quadro. Já entraram como padrão o thread do RSX dormir quando a fila de comandos está vazia, em vez de girar (~8% a menos no tempo do quadro num PC de 4 núcleos), e as SPUs escolherem sozinhas o próximo trabalho (~1,6% a menos no mesmo PC). Os próximos passos: ver exatamente o que o RSX faz naquela espera e levar o módulo de geometria das SPUs para código nativo. Partes pesadas das SPUs já rodam como código nativo, cada uma conferida contra o original: a geometria por draw (índices, skinning, normais e tangentes) e o pós-processamento que suaviza as bordas da imagem. Esses números são de um Ryzen 5 5600G com uma RX 7600; num Ryzen 7 9800X3D com uma RX 9070 XT (RSX do RPCS3, Vulkan), o jogo chega a 60 fps fora das lutas e cai para cerca da metade nelas.
-- **Travamento corrigido:** o jogo às vezes congelava no nível com as listas de geometria das SPUs esperando para sempre. A causa era uma escrita do processador principal que se perdia no meio de uma operação atômica de uma SPU; corrigida, a reprodução passou de 3 travamentos em 5 rodadas para nenhum em 4.
-- **Multijogador (em desenvolvimento):** com um servidor próprio do projeto (ainda privado), o jogo já entra no multijogador, chega ao lobby do guerreiro e guarda o perfil do jogador na conta. A partida online ainda não funciona.
-- **Problemas conhecidos:** logo depois da luta das criaturas, perto do braço gigante, um objeto da área aparece desenhado várias vezes, cada cópia um pouco deslocada (some quando a câmera sai dali); o jogo às vezes ainda trava com uma lista de jobs das SPUs que não termina (`BATCHJOB: Waiting for batch job list ...`; conferindo se a correção acima também resolve este); e a fila de comandos de vídeo às vezes chega corrompida (`FIFO error: possible desync`), mais vezes no Mac: o thread do RSX agora se recupera em vez de travar o jogo, mas a causa ainda está aberta.
 - **Launcher** em português, inglês e espanhol, com vídeo (incluindo desligar efeitos como desfoque de profundidade, motion blur e MLAA, ainda experimental), controles, idioma, legendas e mods; **português do Brasil** com vozes e textos, montado a partir do seu disco americano.
 
 As mudanças de novembro estão no branch [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) até serem medidas no Windows. Ainda não há release. Os marcos estão em [docs/MILESTONES.md](docs/MILESTONES.md).
 
-<!-- Gerado por ps3kit/tools/status_map.py a partir de meta/EBOOT.imports.json e docs/status.json:
-     python ..\ps3kit\tools\status_map.py --imports meta\EBOOT.imports.json --status docs\status.json --src src --src host --out docs\images\status.svg -->
-<p align="center"><img src="docs/images/status.svg" alt="Status: bibliotecas do firmware e hardware do PS3" width="900"></p>
+### Desempenho
+
+O objetivo é rodar bem em processadores comuns, não só nos fortes. Primeiro nível, num Ryzen 7 5700G (cada número medido no Windows, na mesma cena):
+
+| Onde | Começo de novembro | Hoje (5 de novembro) | RPCS3 |
+| --- | --- | --- | --- |
+| Primeiro nível, PC inteiro (8 núcleos, 16 threads) | ~21-23 fps | **~24 fps** | 35-40 fps |
+| Primeiro nível, só 4 núcleos (8 threads) | ~14-15 fps | **~17-18 fps** | |
+| Menu principal | ~50-55 fps | ~50-55 fps | |
+| Luta contra o chefe | 13-21 fps | ainda não medida de novo | |
+
+Num Ryzen 7 9800X3D com uma RX 9070 XT (RSX do RPCS3, Vulkan), o jogo chega a 60 fps fora das lutas e cai para cerca da metade nelas.
+
+**O que rendeu em novembro** (cada mudança medida sozinha, com o jogo alternando entre ligado e desligado na mesma rodada, num PC de 4 núcleos):
+
+- O código do processador principal compilado com perfil de uso real do jogo (PGO): ~6 ms a menos por quadro (~10%). Estendido ao código das SPUs e ao runtime: ~1 ms a mais.
+- O thread principal do jogo com prioridade acima do normal: -2,7 ms por quadro.
+- Os jobs do fim do quadro espalhados por até 4-5 SPUs: -2,1 ms por quadro.
+- O thread do RSX dormindo quando a fila de comandos está vazia, em vez de girar: ~8% a menos; as SPUs escolhendo sozinhas o próximo trabalho: ~1,6% a menos.
+- Mais partes do módulo de geometria das SPUs (o EDGE) em código nativo, conferidas contra o original: o job mais pesado dele ficou 28% mais rápido.
+
+**Para onde vai o quadro agora:** o RSX saiu do caminho crítico nos dois PCs de teste (a espera dele entre as duas passadas da geometria caiu de 9-12 ms para ~0,1 ms). Hoje o quadro é ~55% o EDGE (o módulo 218 das SPUs), mais os jobs de renderização no começo e no fim. Dentro do EDGE, o maior desperdício achado são as interrupções do gerenciador de jobs no meio de cada job: custam tanto quanto o código do próprio job.
+
+**Próximos passos:** diminuir essas interrupções, deixar mais leve a cópia de dados das SPUs (DMA em lista), refazer o PGO com o código novo e, depois, o culling do EDGE em código nativo (o banco de teste dele já reproduz as 412 chamadas gravadas do nível).
+
+### Estabilidade
+
+- **Corrigido:** o travamento no nível com as listas de geometria esperando para sempre (uma escrita do processador principal se perdia no meio de uma operação atômica de uma SPU: de 3 travamentos em 5 rodadas para nenhum em 4).
+- **Corrigido:** o travamento com `CopyLocalMemory offset error` (um contador do Edge Zlib e a troca da tabela de streaming de texturas sem proteção): nenhum em 40 rodadas no nível.
+- **Protegido:** comandos de vídeo corrompidos (`FIFO error: possible desync`) não derrubam mais o thread do RSX, e um draw pedindo uma quantidade absurda de vértices é descartado em vez de travar o jogo. A causa da corrupção ainda está aberta.
+- **Problemas conhecidos:** logo depois da luta das criaturas, perto do braço gigante, um objeto da área aparece desenhado várias vezes, cada cópia um pouco deslocada (some quando a câmera sai dali); o jogo às vezes trava com uma lista de jobs das SPUs que não termina (`BATCHJOB: Waiting for batch job list ...`); e houve um crash silencioso ~70-105 s depois de entrar no nível em duas rodadas.
+
+### Multijogador online (em desenvolvimento)
+
+Os servidores originais do jogo ainda funcionam para quem joga no PS3, mas o jogo recompilado não entra na PSN. Por isso o projeto está escrevendo o próprio servidor (em Rust, ainda privado), e o runtime manda para ele os nomes que o jogo procura. O servidor nunca se passa pela Sony: ele responde só o que o jogo espera, lido no código traduzido ou nas capturas do próprio jogo falando com ele. A partida em si vai direto entre os jogadores (uma malha P2P por UDP, com o netcode do próprio jogo); o servidor cuida da conta, da configuração, do perfil e do matchmaking.
+
+| Passo | Estado |
+| --- | --- |
+| Entrar online, Online Pass | ok |
+| Configuração do online (o jogo lê a nossa) | ok |
+| Termos de uso, perfil do multijogador guardado na conta | ok |
+| Tutorial pulado, lobby do guerreiro | ok |
+| Partida rápida: localização do jogador | ok |
+| Partida rápida: escolha do servidor de matchmaking | ok |
+| Conexão com o matchmaking (o jogo abre uma sessão SSL 3.0) | **em andamento** |
+| Lobby com outros jogadores, a partida | falta |
+
+```mermaid
+flowchart LR
+  subgraph PC["PC do jogador"]
+    L["Launcher<br/>conta e opções do online"]
+    G["Jogo recompilado<br/>(runtime ps3kit)"]
+    L -- "variáveis de ambiente" --> G
+  end
+
+  subgraph SRV["Servidor do projeto (Rust)"]
+    DNS["DNS<br/>nomes do jogo → nosso servidor"]
+    CFG["Configuração do online"]
+    TUS["Perfil do multijogador<br/>por conta"]
+    GEO["Localização"]
+    SAM["Matchmaking<br/>(SSL 3.0, em andamento)"]
+    API["Contas e API"]
+    DB[("PostgreSQL")]
+    TUS --> DB
+    API --> DB
+  end
+
+  WEB["Site do projeto<br/>perfil, ranking, painel"]
+  G2["Jogo de outro jogador"]
+
+  G -- "DNS (UDP)" --> DNS
+  G -- "configuração" --> CFG
+  G -- "perfil" --> TUS
+  G -- "TCP" --> GEO
+  G -- "TCP + SSL" --> SAM
+  L -- "login por código" --> API
+  WEB -- "HTTP" --> API
+  G <-.->|"partida P2P (UDP)"| G2
+```
+
+Já funcionam no servidor e no site (só localmente, nada publicado): as contas, o perfil do multijogador guardado por conta, o perfil público com nível e conquistas, o ranking (vazio até haver partidas) e um painel administrativo. Planejado: o launcher entrar na conta por um código, como numa TV, e os troféus do jogo assinados e conferidos pelo servidor. **"Jogar offline" vai continuar sempre funcionando**: a campanha nunca vai pedir conta.
 
 ## Jogando
 
