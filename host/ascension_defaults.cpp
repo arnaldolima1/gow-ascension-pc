@@ -210,6 +210,18 @@ struct AscensionDefaults {
             } else {
                 set_default("SPURS_NSPUS", "4");
                 set_default("SPURS_WID_LANES", "13:2-3");
+                // its workers sleep on their event instead of yielding: in-run
+                // A/B -0.91 ms a frame (quartiles -1.22 / -0.56), +0.70 fps
+                set_default("GOWA_WWS_SLEEP", "1");
+                // and its lane/ticket stores wake the PPU job scheduler's wait
+                // (GOWA_PPU_SCHED_WAIT), which no SPU write reached any more:
+                // in-run A/B -1.26 ms a frame (quartiles -1.64 / -0.85)
+                set_default("GOWA_WWS_SCHED_KICK", "1");
+                // the PPU's Wws barrier (func_00466E28) calls syscall 1021 in its
+                // spin (tools/ppu_switches.json): in-run A/B -1.52 ms a frame
+                // (quartiles -1.90 / -0.70), +0.96 fps; it never had to sleep,
+                // the gain is the spin leaving the lanes' line alone
+                set_default("GOWA_WWS_BARRIER_WAIT", "1");
             }
         }
         set_default("SPURS_WID_LANES", "13:4-5");

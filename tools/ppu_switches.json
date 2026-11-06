@@ -7,6 +7,8 @@
    "note": "li r11,1020: the job scheduler's not-ready turn (func_00416A00) waits for SPU progress (sys_timer.c syscall 1020)"},
   {"addr": "0x00416AB0", "insn": "0x44000002", "env": "GOWA_PPU_SCHED_WAIT",
    "note": "sc: with the li above, in two of the sixteen nops of that path"},
+  {"addr": "0x00466EA8", "insn": "0x44000002", "r11": "1021", "env": "GOWA_WWS_BARRIER_WAIT",
+   "note": "sc 1021 in place of the spin hint or r31,r31,r31 (r11 dead there, r3 kept by the syscall): the Wws barrier func_00466E28 on a list's lanes sleeps until the Wws executor (GOWA_WWS_EXEC) moves them; lists still on SPURS return at once (ps3kit ASCENSION_PLAN step 3.2)"},
   {"addr": "0x0040559C", "insn": "0x38A00000", "env": "GOWA_NO_DOF",
    "note": "li r5,0: depth of field off (RPCS3 'Disable Depth of Field', 1.12 0x43BCBC)"},
   {"addr": "0x00408AF0", "insn": "0x38A00000", "env": "GOWA_NO_MB",
