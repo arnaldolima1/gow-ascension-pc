@@ -145,7 +145,19 @@ void set_default(const char* name, const char* value)
     if (GetEnvironmentVariableA(name, nullptr, 0) || GetLastError() != ERROR_ENVVAR_NOT_FOUND) return;
     SetEnvironmentVariableA(name, value);
 #else
+    if (getenv(name)) return;
     setenv(name, value, 0);
+#endif
+    // PS3_DEFAULTS_SET (",A,B,"): the switches set here rather than by the user, so
+    // an in-run A/B with CAUSAL_KEEP_DEFAULTS=1 keeps them on in both windows and
+    // toggles only the one under test (ps3kit include/ps3emu/causal_gate.h).
+    static std::string s_set = ",";
+    s_set += name;
+    s_set += ',';
+#ifdef _WIN32
+    SetEnvironmentVariableA("PS3_DEFAULTS_SET", s_set.c_str());
+#else
+    setenv("PS3_DEFAULTS_SET", s_set.c_str(), 1);
 #endif
 }
 
