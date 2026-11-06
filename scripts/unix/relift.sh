@@ -44,6 +44,7 @@ lift() {
             --hle-stubs "$here/meta/EBOOT.imports.json" --toc 0x81EF60 --code-end 0x62C4CC \
             --chunk-lines 150000 --reg-locals --insn-switches "$here/tools/ppu_switches.json" \
             --hle-hooks "$here/tools/ppu_hle_hooks.json" \
+            --native-gates "$here/tools/ppu_native_gates.json" \
             -o "$here/src/recomp" > "$log" 2>&1 ;;
     spu)
         "$PYTHON" "$tools/build_spu_workloads.py" --images "$here/meta/spu" --lifted "$spu" \

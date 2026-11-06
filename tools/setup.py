@@ -157,7 +157,8 @@ def step_ppu(a, kit):
     run(py(kit, 'ppu_lifter.py') + [path('input', 'EBOOT.ELF'), '--functions', path('meta', 'functions.json'),
         '--hle-stubs', path('meta', 'EBOOT.imports.json'), '--toc', '0x81EF60', '--code-end', '0x62C4CC',
         '--chunk-lines', '150000', '--reg-locals', '--insn-switches', path('tools', 'ppu_switches.json'),
-        '--hle-hooks', path('tools', 'ppu_hle_hooks.json'), '-o', out])
+        '--hle-hooks', path('tools', 'ppu_hle_hooks.json'), '--native-gates', path('tools', 'ppu_native_gates.json'),
+        '-o', out])
     return f"{len([f for f in os.listdir(out) if f.endswith(('.c', '.cpp'))])} source files"
 
 

@@ -203,6 +203,8 @@ add_executable(${PROJECT_NAME}
     "${CMAKE_CURRENT_SOURCE_DIR}/host/texstream_sync.cpp"
     # The game's stripped debug printf, printed with GOWA_GAMELOG=1.
     "${CMAKE_CURRENT_SOURCE_DIR}/host/game_log.cpp"
+    # func_002A434C natively (GOWA_SKEL_NATIVE), tools/ppu_native_gates.json.
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/skeleton_native.cpp"
     ${PS3RECOMP_SCAFFOLD}
     ${HLE_NID_TABLE}
     ${RECOMP_SOURCES}

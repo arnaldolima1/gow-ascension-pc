@@ -1,0 +1,4 @@
+[
+  {"addr": "0x002A434C", "gate": "gowa_skel_gate",
+   "note": "the skeleton walk, native with GOWA_SKEL_NATIVE=1 (host/skeleton_native.cpp)"}
+]
