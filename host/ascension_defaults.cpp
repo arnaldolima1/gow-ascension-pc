@@ -269,6 +269,11 @@ struct AscensionDefaults {
         // first level, whole PC: -1.46 ms a frame (quartiles -1.69 / -1.25),
         // +1.07 fps (2026-11-06, S15).
         set_default("PPU_ICALL_FAST", "1");
+        // ... and the lifted code's own store slow path takes it too (its copy
+        // of VM_WRITE_COH in ppu_loader.cpp had been left on the locked path:
+        // ~295k stores a second, 0x970F80 alone ~185k): in-run A/B -2.41 ms a
+        // frame (quartiles -2.49 / -2.04), +1.88 fps (2026-11-06, S15).
+        set_default("COH_LOADER_OPT", "1");
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
