@@ -222,6 +222,10 @@ struct AscensionDefaults {
                 // (quartiles -1.90 / -0.70), +0.96 fps; it never had to sleep,
                 // the gain is the spin leaving the lanes' line alone
                 set_default("GOWA_WWS_BARRIER_WAIT", "1");
+                // the batch-job poll in func_00464F0C's spin (syscall 1022 at
+                // 0x464AD8) pauses while the executor has not moved: in-run A/B
+                // -1.20 ms a frame (quartiles -1.48 / -0.95), +0.90 fps
+                set_default("GOWA_WWS_POLL_PAUSE", "1");
             }
         }
         set_default("SPURS_WID_LANES", "13:4-5");
