@@ -27,6 +27,10 @@ $Log   = Join-Path $Root "build\logs\relift-$What.log"
 # SPU_LIFT_PROMOTE yourself (0 for none) to override.
 $promoteDefault = ($What -in "jobmods", "fragments") -and -not $env:SPU_LIFT_PROMOTE
 if ($promoteDefault) { $env:SPU_LIFT_PROMOTE = "1"; $env:SPU_LIFT_PROMOTE_BAND = "17-64" }
+# The sound modules past the resolver (ps3kit spu_lifter.py local_indirect_branches), inert until
+# SPU_IBL=1. SPU_LIFT_IBL="" for none.
+$iblDefault = ($What -eq "jobmods") -and ($null -eq $env:SPU_LIFT_IBL)
+if ($iblDefault) { $env:SPU_LIFT_IBL = "31107645db58,3a88c1cb87a9" }
 
 if ($What -eq "ppu") {
     # --reg-locals: each lifted function keeps the guest registers in C locals
@@ -108,3 +112,4 @@ if ($What -eq "ppu") {
         --symbol-prefix ascension @(if ($Only) { "--only", $Only }) 2>&1 | Tee-Object $Log
 }
 if ($promoteDefault) { Remove-Item Env:SPU_LIFT_PROMOTE, Env:SPU_LIFT_PROMOTE_BAND }
+if ($iblDefault) { Remove-Item Env:SPU_LIFT_IBL }
