@@ -221,6 +221,13 @@ struct AscensionDefaults {
         // (quartiles -2.43 / -0.67), +0.96 fps (2026-11-05, S15). A pad
         // plugged in mid-game is seen within a second.
         set_default("PS3_PAD_ABSENT_MS", "1000");
+        // A PPU store to a line an SPU once reserved goes without the lock-line
+        // stripe when its sequence count and the line's live bit say nothing ran
+        // there (spu_coherency.c spu_coh_store_opt); ~280k such stores a second,
+        // 98 % to lines no SPU holds. In-run A/B, first level, whole PC: -2.02 ms
+        // a frame (quartiles -2.46 / -1.49), +1.14 fps; level runs with it: no
+        // hang, no copy error (2026-11-05, S15).
+        set_default("PS3_COH_STORE_OPT", "1");
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
