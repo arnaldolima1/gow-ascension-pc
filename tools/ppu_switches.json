@@ -7,6 +7,8 @@
    "note": "li r11,1020: the job scheduler's not-ready turn (func_00416A00) waits for SPU progress (sys_timer.c syscall 1020)"},
   {"addr": "0x00416AB0", "insn": "0x44000002", "env": "GOWA_PPU_SCHED_WAIT",
    "note": "sc: with the li above, in two of the sixteen nops of that path"},
+  {"addr": "0x0040CEB0", "insn": "0x44000002", "r11": "1023", "env": "GOWA_LUM_ASYNC",
+   "note": "sc 1023 in place of lhz r3,0(r6): the frame's one read of a render target (func_0040CE58, its only caller func_003FCCB0, r11 unused in it) returns the last value a helper thread read, so the PPU does not wait for the RSX to flush it (ps3kit sys_timer.c)"},
   {"addr": "0x00466EA8", "insn": "0x44000002", "r11": "1021", "env": "GOWA_WWS_BARRIER_WAIT",
    "note": "sc 1021 in place of the spin hint or r31,r31,r31 (r11 dead there, r3 kept by the syscall): the Wws barrier func_00466E28 on a list's lanes sleeps until the Wws executor (GOWA_WWS_EXEC) moves them; lists still on SPURS return at once (ps3kit ASCENSION_PLAN step 3.2)"},
   {"addr": "0x00464AD8", "insn": "0x44000002", "r11": "1022", "env": "GOWA_WWS_POLL_PAUSE",
