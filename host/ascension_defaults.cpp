@@ -201,6 +201,13 @@ struct AscensionDefaults {
         // decoded once a thread, not word by word every interrupt: whole PC
         // -0.43 ms a frame (quartiles -0.91 / -0.21), 0 refused. S14 A6.
         set_default("SPU_SMC_FAST", "1");
+        // The code-fragment scan of large GETs learns per (image, 4 KB LS page)
+        // instead of per image: the Wws policy module loads code, so it scanned
+        // every data block it fetched too. In-run A/B, first level: whole PC
+        // -1.44 ms a frame (quartiles -1.71 / -0.84), 4 cores / 8 threads
+        // -2.48 ms (-2.78 / -2.03); 5 level runs with it, no hang, no lifted
+        // entry lost (2026-11-05, ps3kit docs/ASCENSION_PLAN.md S15).
+        set_default("SPU_OVL_SCAN_BY_LSA", "1");
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
