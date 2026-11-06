@@ -27,8 +27,8 @@
 # -NoShaderCache: no RPCS3 shader cache. By default the runs share the
 #                launcher's (gamedata\shader_cache, PS3_SHADER_CACHE): the shaders
 #                compiled before load behind a loading screen at the start.
-# -Affinity HEX: the game's logical CPUs (process affinity mask, set as soon as
-#                it is up): a smaller PC on this one, e.g. FF = 4 cores / 8 threads,
+# -Affinity HEX: the game's logical CPUs (process affinity mask, set at creation,
+#                so the defaults read it): a smaller PC on this one, e.g. FF = 4 cores / 8 threads,
 #                3F = 3 cores / 6 threads. SPU pins (SPURS_PIN) outside it are dropped.
 # -ThreadCpuAt N: at N s, every thread's host CPU (user/kernel) over 5 s, by thread
 #                name (tools\thread_cpu.py), into build\logs\<Name>-cpu.txt.
@@ -125,18 +125,15 @@ if ($Profile) {
 }
 
 $t0 = Get-Date
-$p = Start-Process cmd.exe -ArgumentList "/c `"`"$Exe`" `"$Elf`" > `"$Log`" 2>&1`"" -WorkingDirectory $Root -PassThru -WindowStyle Hidden
+# `start /affinity` so the very first instruction runs under the mask: set from
+# here, after the start, host/ascension_defaults.cpp still saw every CPU and
+# chose the big PC's setup on a "4-core" run.
+$launch = if ($Affinity) { "start `"`" /b /wait /affinity $Affinity " } else { "" }
+$p = Start-Process cmd.exe -ArgumentList "/c `"$launch`"$Exe`" `"$Elf`" > `"$Log`" 2>&1`"" -WorkingDirectory $Root -PassThru -WindowStyle Hidden
 foreach ($k in $saved.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k]) }
 Write-Host $(if ($Seconds -le 0) { "running until closed (log: $Log)" } else { "running for $Seconds s (log: $Log)" })
 
-if ($Affinity) {
-    # as early as the process shows, before the SPU threads start
-    for ($i = 0; $i -lt 100 -and -not $game; $i++) {
-        $game = Get-Process AscensionRecomp -ErrorAction SilentlyContinue | Sort-Object StartTime -Descending | Select-Object -First 1
-        if (-not $game) { Start-Sleep -Milliseconds 20 }
-    }
-    if ($game) { $game.ProcessorAffinity = [IntPtr][Convert]::ToInt64($Affinity, 16); Write-Host "affinity 0x$Affinity" }
-}
+if ($Affinity) { Write-Host "affinity 0x$Affinity" }
 Start-Sleep -Seconds 2
 # Up to 60 s for the process to show: a large executable (a PGO training
 # build) took longer than the 2 s above, and the run then returned at once,

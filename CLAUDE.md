@@ -6,4 +6,4 @@ Every reply to the user is in Brazilian Portuguese (pt-BR): final answers, short
 
 ## Rule: one performance plan
 
-Ascension's performance work follows `../ps3kit/docs/ASCENSION_PLAN.md`, the only plan. Work its steps in order unless the user says otherwise; when a step is done and measured, tick its box and write the result beside it. Do not start new plan documents: add to that one.
+Ascension's performance work follows `../ps3kit/docs/ASCENSION_PERF.md`, the short working list: read it first, take the first open box unless the user says otherwise; when a step is done and measured, tick its box and write the result beside it. `../ps3kit/docs/ASCENSION_PLAN.md` is its archive and takes the long evidence. Do not start other plan documents.
