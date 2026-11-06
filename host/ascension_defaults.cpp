@@ -208,6 +208,19 @@ struct AscensionDefaults {
         // -2.48 ms (-2.78 / -2.03); 5 level runs with it, no hang, no lifted
         // entry lost (2026-11-05, ps3kit docs/ASCENSION_PLAN.md S15).
         set_default("SPU_OVL_SCAN_BY_LSA", "1");
+        // The ICE batch-job probe (spu_channels.c) is armed unless this is 0, and
+        // in this game it never reached its 240-sample stop: lock-prefixed
+        // counters in lines shared by the SPU threads on every indirect branch
+        // and DMA, for a measurement nobody reads. In-run A/B, first level, whole
+        // PC: -1.98 ms a frame (quartiles -2.60 / -1.43), +1.05 fps (2026-11-05,
+        // ps3kit docs/ASCENSION_PLAN.md S15). GOWA_BATCHJOB_DUMP=1 brings it back.
+        set_default("GOWA_BATCHJOB_DUMP", "0");
+        // An XInput slot found empty is asked again after 1 s, not every 4 ms
+        // sweep on the main PPU thread (XInputGetState on an empty slot is
+        // slow). In-run A/B, first level, whole PC: -1.61 ms a frame
+        // (quartiles -2.43 / -0.67), +0.96 fps (2026-11-05, S15). A pad
+        // plugged in mid-game is seen within a second.
+        set_default("PS3_PAD_ABSENT_MS", "1000");
         // The main PPU thread on core 0, which SPURS_PIN leaves free: it
         // waits on the SPUs and kicks their next jobs. ~15.8 -> ~16.7 fps.
         set_default("PS3_PIN_PPU", "1");
