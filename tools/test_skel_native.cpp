@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 #include <sys/mman.h>
+#include <time.h>
 
 #include "../host/skeleton_native.cpp"
 
@@ -17,8 +18,8 @@ extern "C" PPU_THREAD_LOCAL void (*g_trampoline_fn)(void*) = nullptr;
 // the guest memory and what the lift needs of the runtime
 extern "C" {
 uint8_t* vm_base;
-int vm_inline_ok = 1, vm_store_inline_ok = 1, g_spu_coh_armed = 0;
-unsigned char g_spu_coh_bitmap[1];
+int vm_inline_ok = 1, vm_store_inline_ok = 1, g_spu_coh_armed = 1;   // armed, as in the game
+unsigned char g_spu_coh_bitmap[(1u << 25)];
 uint32_t g_barrier_sync_watch = 0, ppu_vm_size = 0, ppu_hle_inject_base = 0xD0000000u;
 volatile int g_causal_on = 1;
 int ps3_causal_tested(const char*) { return 0; }
@@ -272,6 +273,24 @@ int main(int argc, char** argv)
             if (bad > 5) break;
         }
         printf("captured: %ld calls, %ld bones, %ld callback calls, %ld differ\n", n, bones, g_total_calls, bad);
+    }
+    if (const char* e = getenv("SKEL_BENCH")) {   // the time in the calls alone, memory loaded before each
+        const std::vector<Case> cases = read_capture(argv[1]);
+        static ppu_context* ctx = (ppu_context*)aligned_alloc(4096, (sizeof(ppu_context) + 4095) & ~size_t(4095));
+        for (int native = 0; native < 2; native++) {
+            unsigned long long ns = 0;
+            for (long round = 0; round < atol(e); round++)
+                for (const auto& c : cases) {
+                    load(c, ctx, 1);
+                    timespec t0, t1;
+                    clock_gettime(CLOCK_MONOTONIC, &t0);
+                    if (native) gowa_skel_gate(ctx); else lifted_002A434C(ctx);
+                    clock_gettime(CLOCK_MONOTONIC, &t1);
+                    ns += (t1.tv_sec - t0.tv_sec) * 1000000000ull + t1.tv_nsec - t0.tv_nsec;
+                }
+            printf("%s: %.1f us a call\n", native ? "native" : "lifted", (double)ns / 1000.0 / (double)(atol(e) * cases.size()));
+        }
+        return 0;
     }
     const long rand_n = argc > 2 ? atol(argv[2]) : 20000;
     long rbad = 0;

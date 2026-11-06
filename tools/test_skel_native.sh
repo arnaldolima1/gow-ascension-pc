@@ -16,10 +16,11 @@ first=$(grep -n 'void func_[0-9A-F]*(ppu_context\* ctx) {' "$chunk" | head -1 | 
     sed -n '/void func_002A434C(ppu_context\* ctx) {/,/^}/p' "$chunk" | grep -v 'gowa_skel_gate' |
         sed 's/void func_002A434C(ppu_context\* ctx)/extern "C" void lifted_002A434C(ppu_context* ctx)/'
 } > "$out/lifted.cpp"
+[ -n "${LIFT_SED:-}" ] && sed -i '' -e "$LIFT_SED" "$out/lifted.cpp"
 arch=""
 [ "$(uname -m)" = arm64 ] && arch="-arch x86_64"
 flags="$arch -std=c++17 -O2 -mavx2 -mbmi2 -mfma -ffp-contract=off -w -I$here/src/recomp -I$kit/include -I$kit/runtime/ppu -I$kit/runtime/memory"
-clang++ $flags -c "$out/lifted.cpp" -o "$out/lifted.o"
+clang++ $flags ${LIFT_FLAGS:-} -c "$out/lifted.cpp" -o "$out/lifted.o"
 clang++ $flags -c "$here/tools/test_skel_native.cpp" -o "$out/test.o"
 clang++ $arch "$out/lifted.o" "$out/test.o" -o "$out/test"
 "$out/test" "${1:--}" "${2:-20000}"
