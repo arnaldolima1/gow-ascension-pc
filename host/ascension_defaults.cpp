@@ -187,10 +187,30 @@ struct AscensionDefaults {
         // competes for the cores (otavix010 saw the same). 2026-11-05, ps3kit
         // docs/ASCENSION_PLAN.md S14 A1/A2. Placed before the plain lanes so
         // they do not win.
+        // ... superseded on the same hosts by the EDGE lists outside SPURS
+        // (plan step 3.1): GOWA_WWS_EXEC runs workloads 15-17 on four host
+        // workers of its own (job.c), so SPURS keeps four SPUs and RenderJobs
+        // (wid 13) leaves SPUs 0-1 to the rest. Alternating level runs, whole
+        // PC: base 27 / 26 against 29 / 27 fps (2026-11-05, S15); 8 level runs
+        // with it, no hang. The alias above stays for GOWA_WWS_EXEC=0.
+        // The executor is Windows-only (job.c's workers): elsewhere the alias.
         if (logical_cpus() >= 12) {
-            set_default("SPURS_NSPUS", "7");
-            set_default("SPURS_SPU_ALIAS", "6:3");
-            set_default("SPURS_WID_LANES", "9-12:0-2,4-6;13:4-5");
+#ifdef _WIN32
+            set_default("GOWA_WWS_EXEC", "15,16,17");
+            char wv[64] = {0};
+            const DWORD wn = GetEnvironmentVariableA("GOWA_WWS_EXEC", wv, sizeof wv);
+            const bool no_exec = wn == 0 || wn >= sizeof wv || wv[0] == '0';
+#else
+            const bool no_exec = true;
+#endif
+            if (no_exec) {
+                set_default("SPURS_NSPUS", "7");
+                set_default("SPURS_SPU_ALIAS", "6:3");
+                set_default("SPURS_WID_LANES", "9-12:0-2,4-6;13:4-5");
+            } else {
+                set_default("SPURS_NSPUS", "4");
+                set_default("SPURS_WID_LANES", "13:2-3");
+            }
         }
         set_default("SPURS_WID_LANES", "13:4-5");
         // MFC commands without the full path's diagnostic switches (spu_dma.h).
