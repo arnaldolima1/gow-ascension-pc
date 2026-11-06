@@ -206,7 +206,10 @@ struct AscensionDefaults {
         // PC: base 27 / 26 against 29 / 27 fps (2026-11-05, S15); 8 level runs
         // with it, no hang. The alias above stays for GOWA_WWS_EXEC=0.
         // The executor is Windows-only (job.c's workers): elsewhere the alias.
-        if (logical_cpus() >= 12) {
+        // 8 logical CPUs too (4 cores, -Affinity FF, 2026-11-06 S17 K5): 19 fps
+        // without it against 21-22 with it (12 level runs, the four below on or
+        // off alike); the 7-SPU alias stays a 12-CPU setup for GOWA_WWS_EXEC=0.
+        if (logical_cpus() >= 8) {
 #ifdef _WIN32
             set_default("GOWA_WWS_EXEC", "15,16,17");
             char wv[64] = {0};
@@ -216,9 +219,11 @@ struct AscensionDefaults {
             const bool no_exec = true;
 #endif
             if (no_exec) {
+                if (logical_cpus() >= 12) {
                 set_default("SPURS_NSPUS", "7");
                 set_default("SPURS_SPU_ALIAS", "6:3");
                 set_default("SPURS_WID_LANES", "9-12:0-2,4-6;13:4-5");
+                }
             } else {
                 set_default("SPURS_NSPUS", "4");
                 set_default("SPURS_WID_LANES", "13:2-3");
