@@ -449,6 +449,14 @@ else()
         COMPILE_OPTIONS "-w;-ffp-contract=off;-fno-math-errno")
 endif()
 
+# This game's native code and title hooks live in a private repository beside this one.
+get_filename_component(ASCENSION_NATIVE_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/../ascension-native" ABSOLUTE)
+set(ASCENSION_NATIVE_DIR "${ASCENSION_NATIVE_DEFAULT}" CACHE PATH "Checkout of ascension-native")
+if(NOT EXISTS "${ASCENSION_NATIVE_DIR}/AscensionNative.cmake")
+    message(FATAL_ERROR "ascension-native not found at ${ASCENSION_NATIVE_DIR} (ASCENSION_NATIVE_DIR)")
+endif()
+include("${ASCENSION_NATIVE_DIR}/AscensionNative.cmake")
+
 # PPU-only profile-guided optimization: ASCENSION_PPU_PGO=OFF (default, flags
 # unchanged) / GENERATE / USE (scripts\windows\pgo-ppu.ps1, docs/PPU_PGO.md).
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AscensionPgo.cmake")

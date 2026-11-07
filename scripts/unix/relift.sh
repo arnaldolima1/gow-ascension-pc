@@ -55,7 +55,7 @@ lift() {
         # merged chunks and module 218's native functions, as relift.ps1
         SPU_LIFT_PROMOTE=$promote SPU_LIFT_PROMOTE_BAND=$band \
         SPU_LIFT_IBL=${SPU_LIFT_IBL-31107645db58,3a88c1cb87a9} \
-        LIFT_JOBMODS_MERGE=1 LIFT_NATIVE="$PS3KIT_DIR/libs/spu_hle/gowa_drawcmd/native_functions.txt" \
+        LIFT_JOBMODS_MERGE=1 LIFT_NATIVE="$top/ascension-native/gowa_drawcmd/native_functions.txt" \
         "$PYTHON" "$tools/lift_jobmods.py" --jobmods "$jobmods" --out "$spu" \
             --register "$spu/jobmods_register.c" --symbol-prefix ascension \
             --extra-funcs-json "$here/tools/jobmods_extra_funcs.json" > "$log" 2>&1 ;;

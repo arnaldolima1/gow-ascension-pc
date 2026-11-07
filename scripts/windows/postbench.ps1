@@ -1,5 +1,5 @@
 # Bench of the post-process round's stage functions (SPU image 2, ps3kit
-# libs\spu_hle\gowa_post): reruns captured calls instead of the game, times
+# ascension-native\gowa_post): reruns captured calls instead of the game, times
 # them and compares their result with the capture.
 #
 #   .\scripts\windows\postbench.ps1                       # work\post_cases\level2, 200 runs a record

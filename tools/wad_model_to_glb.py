@@ -17,7 +17,7 @@ A mesh group (MG_ block, loaded in place: the RSX reads its UV streams from it) 
 - vertex records of 12 bytes (the input stream description, 48 bytes): position as three u16
   fixed point (0 integer bits, 16 fraction bits; position = (raw + offset) / 65536, metres, the
   bind pose with the arms out), a unit-vector normal (3 bytes) and tangent (3 bytes);
-- indices in EDGE's compressed format (ps3kit libs/spu_hle/gowa_drawcmd/indices.h);
+- indices in EDGE's compressed format (ascension-native/gowa_drawcmd/indices.h);
 - before the segment, the RSX attribute table: entries (u32 size, s32 self-relative pointer,
   u32 tag), tag byte 0 the role (0x0A texcoord 0 = RSX attribute 2, 0x0B texcoord 1, 0x09 colour)
   and stride = (tag >> 9) & 0x7F; the UVs are float2, not packed. The segments of one part share

@@ -52,9 +52,9 @@ if ($What -eq "ppu") {
     if (-not (Test-Path $mods)) { $mods = Join-Path $Work "jobmods" }
     # Contiguous chunks lift as one C function (~10 -> ~12 fps in the level),
     # and module 218's functions with a native version call it (ps3kit
-    # libs\spu_hle\gowa_drawcmd\native_functions.txt).
+    # ascension-native\gowa_drawcmd\native_functions.txt).
     $env:LIFT_JOBMODS_MERGE = "1"
-    $env:LIFT_NATIVE = Join-Path $Cfg.PS3KIT_DIR "libs\spu_hle\gowa_drawcmd\native_functions.txt"
+    $env:LIFT_NATIVE = Join-Path (Split-Path $Root) "ascension-native\gowa_drawcmd\native_functions.txt"
     if ($Only) {
         # Lift one module in a scratch folder and copy only its sources over:
         # rewriting all of them would make every module recompile.
@@ -85,12 +85,12 @@ if ($What -eq "ppu") {
     & (Join-Path $PSScriptRoot "relift.ps1") post
 } elseif ($What -eq "post") {
     # The post-process round's image: its stage functions come through ps3kit
-    # libs\spu_hle\gowa_post (capture, bench, native versions).
+    # ascension-native\gowa_post (capture, bench, native versions).
     $img = "spu_0001_at_0067F580"
     $elf = Join-Path $Root "meta\spu\$img.elf"
     $out = Join-Path $Spu $img
     $nat = @()
-    foreach ($l in Get-Content (Join-Path $Cfg.PS3KIT_DIR "libs\spu_hle\gowa_post\native_functions.txt")) {
+    foreach ($l in Get-Content (Join-Path (Split-Path $Root) "ascension-native\gowa_post\native_functions.txt")) {
         if ($l -match '^\s*(0x[0-9A-Fa-f]+)\s+(\S+)') { $nat += "--native"; $nat += "$($Matches[1])=$($Matches[2])" }
     }
     # --merge-chunks: each stage's loops become gotos in one C function instead

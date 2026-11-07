@@ -225,8 +225,12 @@ struct AscensionDefaults {
                 set_default("SPURS_WID_LANES", "9-12:0-2,4-6;13:4-5");
                 }
             } else {
-                set_default("SPURS_NSPUS", "4");
-                set_default("SPURS_WID_LANES", "13:2-3");
+                // Six SPUs, not four: with 4 or 5 the mix stays silent (AUDIO_PEAK 0,
+                // port ring empty), with 6 it plays (2026-11-06 S17). Why is not
+                // known: which workload or task needs the sixth was not found. Every
+                // number measured with four since S15 was taken with no sound
+                // running. RenderJobs keeps the 13:4-5 lanes.
+                set_default("SPURS_NSPUS", "6");
                 // its workers sleep on their event instead of yielding: in-run
                 // A/B -0.91 ms a frame (quartiles -1.22 / -0.56), +0.70 fps
                 set_default("GOWA_WWS_SLEEP", "1");
@@ -250,6 +254,13 @@ struct AscensionDefaults {
         // In-run A/B, first level: whole PC -0.88 ms a frame (quartiles -1.26 /
         // -0.46), 4 cores / 8 threads -1.34 ms (-1.97 / -1.13). S14 A3/A4.
         set_default("SPU_DMA_LEAN", "1");
+        // A Wws job that stops itself (module 759d's bytecode interpreter on a
+        // bad opcode) no longer freezes its list: its lane is freed and the
+        // manager's context dropped (ascension-native/gowa_drawcmd/job.c,
+        // ps3_title_spurs_pm_abort). The BATCHJOB freeze: 7 of 8 plays past the
+        // first level's test spot on 2026-11-06. Rehearsed with SPU_IB_INJECT at
+        // three points, no freeze; not yet seen firing in a real play.
+        set_default("GOWA_WWS_HALT_RELEASE", "1");
         // The Wws interrupt handler's register save/restore stubs at LS 0x3FEC0
         // decoded once a thread, not word by word every interrupt: whole PC
         // -0.43 ms a frame (quartiles -0.91 / -0.21), 0 refused. S14 A6.
@@ -261,13 +272,6 @@ struct AscensionDefaults {
         // -2.48 ms (-2.78 / -2.03); 5 level runs with it, no hang, no lifted
         // entry lost (2026-11-05, ps3kit docs/ASCENSION_PLAN.md S15).
         set_default("SPU_OVL_SCAN_BY_LSA", "1");
-        // The ICE batch-job probe (spu_channels.c) is armed unless this is 0, and
-        // in this game it never reached its 240-sample stop: lock-prefixed
-        // counters in lines shared by the SPU threads on every indirect branch
-        // and DMA, for a measurement nobody reads. In-run A/B, first level, whole
-        // PC: -1.98 ms a frame (quartiles -2.60 / -1.43), +1.05 fps (2026-11-05,
-        // ps3kit docs/ASCENSION_PLAN.md S15). GOWA_BATCHJOB_DUMP=1 brings it back.
-        set_default("GOWA_BATCHJOB_DUMP", "0");
         // An XInput slot found empty is asked again after 1 s, not every 4 ms
         // sweep on the main PPU thread (XInputGetState on an empty slot is
         // slow). In-run A/B, first level, whole PC: -1.61 ms a frame
@@ -365,8 +369,7 @@ struct AscensionDefaults {
         // cores (as RPCS3's "Max SPURS threads"). First level at 8 logical
         // CPUs: 18 fps both ways, 6.84 -> 6.43 cores; at 12: 27 -> 26 fps,
         // 8.10 -> 7.10 cores, so 12 or more keep six.
-        if (logical_cpus() <= 8)
-            set_default("SPURS_NSPUS", "5");
+        // Removed 2026-11-06 (S17): with five SPUs the game has no sound.
     }
 
     // launcher/Cinzel-Black.ttf beside a build in build/<platform>/ (the
