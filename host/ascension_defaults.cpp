@@ -256,7 +256,7 @@ struct AscensionDefaults {
         set_default("SPU_DMA_LEAN", "1");
         // A Wws job that stops itself (module 759d's bytecode interpreter on a
         // bad opcode) no longer freezes its list: its lane is freed and the
-        // manager's context dropped (ascension-native/gowa_drawcmd/job.c,
+        // manager's context dropped (ascension-native/render/geometry/job.c,
         // ps3_title_spurs_pm_abort). The BATCHJOB freeze: 7 of 8 plays past the
         // first level's test spot on 2026-11-06. Rehearsed with SPU_IB_INJECT at
         // three points, no freeze; not yet seen firing in a real play.

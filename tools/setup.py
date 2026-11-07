@@ -170,7 +170,7 @@ def step_spu(a, kit):
         '--title', 'ascension', '--relift', '--extra-funcs', 'spu_wws_pm_at_0077CA80=0xA2C,0xA68,0x3368,0x3378'])
     # the post-process round with ps3kit's native stage functions, as relift.ps1 post
     nat = []
-    for line in open(path('..', 'ascension-native', 'gowa_post', 'native_functions.txt')):
+    for line in open(path('..', 'ascension-native', 'render', 'post_process', 'native_functions.txt')):
         parts = line.split()
         if len(parts) >= 2 and parts[0].lower().startswith('0x'):
             nat += ['--native', f'{parts[0]}={parts[1]}']
@@ -186,7 +186,7 @@ def step_spu(a, kit):
         open(p, 'w', encoding='utf-8', newline='').write(text)
     # the job modules (merged chunks, module 218's native functions) and the code fragments
     env = dict(os.environ, LIFT_JOBMODS_MERGE='1',
-               LIFT_NATIVE=path('..', 'ascension-native', 'gowa_drawcmd', 'native_functions.txt'))
+               LIFT_NATIVE=path('..', 'ascension-native', 'render', 'geometry', 'native_functions.txt'))
     run(py(kit, 'lift_jobmods.py') + ['--jobmods', path('input', 'jobmods'), '--out', spu,
         '--register', os.path.join(spu, 'jobmods_register.c'), '--symbol-prefix', 'ascension',
         '--extra-funcs-json', path('tools', 'jobmods_extra_funcs.json')], env=env)
@@ -394,8 +394,8 @@ def inputs(step, a, kit):
                           path('tools', 'ppu_hle_hooks.json')]) + elf + tools
     if step == 'spu':
         return (tree_hash([path('meta', 'spu'), path('input', 'jobmods'), path('tools', 'jobmods_extra_funcs.json'),
-                           path('tools', 'job_fragments.json'), path('..', 'ascension-native', 'gowa_post', 'native_functions.txt'),
-                           path('..', 'ascension-native', 'gowa_drawcmd', 'native_functions.txt')]) + elf + tools)
+                           path('tools', 'job_fragments.json'), path('..', 'ascension-native', 'render', 'post_process', 'native_functions.txt'),
+                           path('..', 'ascension-native', 'render', 'geometry', 'native_functions.txt')]) + elf + tools)
     if step == 'configure':
         return hashlib.sha256(' '.join(configure_args(a, kit)).encode()).hexdigest()
     return None

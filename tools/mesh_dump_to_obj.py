@@ -1,4 +1,4 @@
-"""Turn GOWA_MESH_DUMP files (ascension-native/gowa_drawcmd hooks.c) into Wavefront OBJ, to look at.
+"""Turn GOWA_MESH_DUMP files (ascension-native/render/geometry/native_hooks.c) into Wavefront OBJ, to look at.
 
     python3 tools/mesh_dump_to_obj.py <dump dir> [--min-tris 50] [--out <dir>] [--first N] [--last N] [--latest N] [--quiet]
         [--box x0,y0,z0,x1,y1,z1] [--unique] [--glb <file>]

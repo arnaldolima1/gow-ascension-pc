@@ -9,7 +9,7 @@ SPU_JOBCAP=<dir>,218,AD98,1500 (ps3kit runtime/spu/spu_jobcap.c); the files stay
 Read 2026-11-04 against the RSX draw dump (the posed positions agree to ~1 mm):
 - a record ("SJC1") holds the job's local store at its start (tag 1); the job's input DMA list is
   22 (size, EA) entries at LS 0x1CF50 (buffers from 0x11000) or 0x28F50 (from 0x1D000), the
-  buffers back to back (ascension-native/gowa_drawcmd/NOTES.md);
+  buffers back to back (ascension-native/render/geometry/NOTES.md);
 - entry 11 is the segment's vertex stream, byte for byte the MG_ block's (that is how a job is tied
   to its segment), entry 10 its bone bytes (the MG_ block's skin stream, C+0x40);
 - entries 6 and 7, back to back, are the palette: 64-byte records, a column-major 4x4 of big-endian
