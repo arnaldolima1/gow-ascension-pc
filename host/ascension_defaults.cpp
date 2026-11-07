@@ -247,6 +247,13 @@ struct AscensionDefaults {
                 // 0x464AD8) pauses while the executor has not moved: in-run A/B
                 // -1.20 ms a frame (quartiles -1.48 / -0.95), +0.90 fps
                 set_default("GOWA_WWS_POLL_PAUSE", "1");
+                // a worker keeps the module its last job loaded and copies only
+                // the part jobs write (the last 0x1000 bytes) instead of all of
+                // it (module 218: 53 KB a job, ~2.4 GB/s of memcpy, the "rep
+                // movsb" ~5 % of each worker): =check found the rest identical
+                // on 2.6M level and 1M menu jobs; alternating level runs 27.0 /
+                // 27.4 against 26.0 / 26.7 fps (2026-11-07, km*).
+                set_default("GOWA_WWS_KEEP_MODULE", "1");
             }
         }
         set_default("SPURS_WID_LANES", "13:4-5");
