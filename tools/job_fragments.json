@@ -7,7 +7,10 @@
  {
   "ea": "0x719900",
   "span": "0x940",
-  "seen": true
+  "seen": true,
+  "native": {
+   "0x719900": "gowa_pic_719900"
+  }
  },
  {
   "ea": "0x71a240",
@@ -59,7 +62,10 @@
  {
   "ea": "0x71fa90",
   "span": "0x610",
-  "seen": false
+  "seen": false,
+  "native": {
+   "0x71fa90": "gowa_pic_71fa90"
+  }
  },
  {
   "ea": "0x7200a0",
