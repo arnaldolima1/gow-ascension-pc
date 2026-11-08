@@ -114,6 +114,7 @@
 #endif
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <string>
 
 namespace {
@@ -166,6 +167,15 @@ struct AscensionDefaults {
     {
         set_default("PS3_EDGE_ZLIB_HLE", "1");
         set_default("RSX_LIVE_DRAW", "1");
+        // ps3kit's Vulkan renderer: the frame's copy into main memory for the
+        // SPU MLAA round stays on the GPU (AA done there, SMAA by default)
+        // instead of a whole-target readback each frame, which held the RSX
+        // thread ~8 ms a frame on the GPU. Corridor 24.5 -> 28.6 fps
+        // (2026-11-08, wsites / wsites-mirror runs).
+        {
+            const char* r = getenv("PS3_RSX");
+            if (r && !strcmp(r, "vulkan")) set_default("RSX_ENGINE_GPU_MIRROR", "1");
+        }
         set_default("LD_SWIN", "0");
         set_default("GCM_PARK_WAIT_MS", "2000");
         set_default("GCM_SEMA_ACQUIRE", "1");
