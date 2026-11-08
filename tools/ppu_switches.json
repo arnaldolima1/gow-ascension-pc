@@ -28,5 +28,15 @@
   {"addr": "0x0032AA24", "insn": "0x60630001", "env": "GOWA_ONLINE_PASS",
    "note": "ori r3,r3,1: the same, before func_0032A8A4's 'No Online Pass' test (else the 'An Online Pass is required' dialog and the store)"},
   {"addr": "0x003319BC", "insn": "0x38600001", "env": "GOWA_TSS_PLAIN",
-   "note": "li r3,1 in place of bl func_003E28E8 (the TSS decrypt, Blowfish-OFB with the game's own key): the title small storage is taken as plain text, written by our online (ascension-online SPEC 2.8) and handed over by ps3kit's sceNpLookupTitleSmallStorageAsync (PS3_NP_TSS). No key of the game is used"}
+   "note": "li r3,1 in place of bl func_003E28E8 (the TSS decrypt, Blowfish-OFB with the game's own key): the title small storage is taken as plain text, written by our online (ascension-online SPEC 2.8) and handed over by ps3kit's sceNpLookupTitleSmallStorageAsync (PS3_NP_TSS). No key of the game is used"},
+  {"addr": "0x002B3BE8", "insn": "0x60000000", "env": "GOWA_UNLOCK_FPS",
+   "note": "Unlock FPS (RPCS3 1.04 patch ported to 1.00, BilalReloaded): nop: keep the target-fps store at 0x002B3BE8 (stfs f1,-0x50EC(r4) -> 0x81AF14) from overwriting the patched 60"},
+  {"addr": "0x002AE1B4", "insn": "0xC043913C", "env": "GOWA_UNLOCK_FPS",
+   "note": "Unlock FPS (RPCS3 1.04 patch ported to 1.00, BilalReloaded): lfs f2,-0x6EC4(r3): gameplay speed scaling reads 1000.0f at 0x81913C instead of the target fps"},
+  {"addr": "0x002B3CD4", "insn": "0xC025913C", "env": "GOWA_UNLOCK_FPS",
+   "note": "Unlock FPS (RPCS3 1.04 patch ported to 1.00, BilalReloaded): lfs f1,-0x6EC4(r5): sync, 1000.0f"},
+  {"addr": "0x002B3D7C", "insn": "0xC023913C", "env": "GOWA_UNLOCK_FPS",
+   "note": "Unlock FPS (RPCS3 1.04 patch ported to 1.00, BilalReloaded): lfs f1,-0x6EC4(r3): sync, 1000.0f"},
+  {"addr": "0x003C8388", "insn": "0xC3E4913C", "env": "GOWA_UNLOCK_FPS",
+   "note": "Unlock FPS (RPCS3 1.04 patch ported to 1.00, BilalReloaded): lfs f31,-0x6EC4(r4): video playback speed scaling, 1000.0f"}
 ]
