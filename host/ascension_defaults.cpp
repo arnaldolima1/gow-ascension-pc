@@ -108,6 +108,7 @@
 #else
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #endif
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -380,6 +381,7 @@ struct AscensionDefaults {
         // palette (text, panel, gold titles).
         set_default("PS3_OVERLAY_COLORS", "#E2B86AFF,#0B090899,#E2B86AFF,#00000000");
         set_default_overlay_font();
+        set_default_shader_cache();
         set_default("PS3_VERBOSE", "0");
         // Five SPU workers instead of the title's six on a host with 8 logical
         // CPUs or fewer: the sixth competes with the PPU and RSX threads for
@@ -387,6 +389,41 @@ struct AscensionDefaults {
         // CPUs: 18 fps both ways, 6.84 -> 6.43 cores; at 12: 27 -> 26 fps,
         // 8.10 -> 7.10 cores, so 12 or more keep six.
         // Removed 2026-11-06 (S17): with five SPUs the game has no sound.
+    }
+
+    // ps3kit's Vulkan renderer: its translated shaders (SPIR-V) and the
+    // driver's compiled pipelines kept on disk beside the executable
+    // (shader_cache/vulkan/), so a second run does not compile them again
+    // in the middle of play (a fight compiled for ~20 s at 1-4 fps on
+    // 2026-11-08, fight4 run). The RPCS3 renderer keeps its own cache.
+    static void set_default_shader_cache()
+    {
+        const char* r = getenv("PS3_RSX");
+        if (!r || strcmp(r, "vulkan")) return;
+        char exe[4096] = {0};
+#ifdef _WIN32
+        if (!GetModuleFileNameA(nullptr, exe, sizeof(exe))) return;
+#elif defined(__APPLE__)
+        uint32_t n = sizeof(exe);
+        if (_NSGetExecutablePath(exe, &n)) return;
+#else
+        if (readlink("/proc/self/exe", exe, sizeof(exe) - 1) <= 0) return;
+#endif
+        std::string dir = exe;
+        const auto slash = dir.find_last_of("/\\");
+        if (slash == std::string::npos) return;
+        dir.resize(slash);
+        const std::string parts[3] = { dir + "/shader_cache", dir + "/shader_cache/vulkan",
+                                       dir + "/shader_cache/vulkan/spirv" };
+        for (const std::string& d : parts) {
+#ifdef _WIN32
+            CreateDirectoryA(d.c_str(), nullptr);
+#else
+            mkdir(d.c_str(), 0755);
+#endif
+        }
+        set_default("PS3RECOMP_SPIRV_CACHE", parts[2].c_str());
+        set_default("PS3RECOMP_VK_PIPELINE_CACHE", (parts[1] + "/pipelines.bin").c_str());
     }
 
     // launcher/Cinzel-Black.ttf beside a build in build/<platform>/ (the
