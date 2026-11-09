@@ -21,7 +21,12 @@
 //                      runtime follows `put` (ps3recomp's default is 50 ms).
 //                      This title's SPU jobs fill a frame and patch the park
 //                      after `put` has moved; following it early skips the
-//                      frame.
+//                      frame. It is always patched here, so the wait has no
+//                      end in practice (10 min): at 2000 ms a slow stretch
+//                      (GOWA_NATIVE_CHECK=1 at the level load, 2026-11-09) let
+//                      the walker jump to `put`, dropping the frame's commands
+//                      and a Wws counter with them, and the PPU spun on that
+//                      counter for the rest of the run.
 //   GCM_SEMA_ACQUIRE   a FIFO SEMAPHORE_ACQUIRE really waits. After each
 //                      frame's reports the GPU waits for the label the SPU
 //                      post-process tasks write when they finish the frame;
@@ -178,7 +183,7 @@ struct AscensionDefaults {
             if (r && !strcmp(r, "vulkan")) set_default("RSX_ENGINE_GPU_MIRROR", "1");
         }
         set_default("LD_SWIN", "0");
-        set_default("GCM_PARK_WAIT_MS", "2000");
+        set_default("GCM_PARK_WAIT_MS", "600000");
         set_default("GCM_SEMA_ACQUIRE", "1");
         set_default("GCM_PARK_SPU_HOLD_MS", "1000");
         set_default("GCM_REPORT_SPU_HOLD_MS", "50");
