@@ -415,6 +415,21 @@ struct AscensionDefaults {
         // 93b0149c, plan A4): walker 16.6 -> 15.1 us a draw in the fight, picture
         // checked in the menu and the fight (2026-11-09).
         set_default("RSX_ENGINE_FIFO_FAST", "1");
+        // Walker pieces measured in the fight bench (plan A4, 2026-11-09, means
+        // of 10 windows, A/B back to back; picture checked in two fight shots):
+        // cheaper pipeline stage (pipeline 1.93 -> 1.50 us a draw), only the
+        // vertex constants a program can read, copied once straight into the
+        // uniform ring and reused when unchanged (0.44 -> 0.09 us, draw -0.25),
+        // segmented vertex sources without a staging copy, word-wise descriptor
+        // hash, and the 2D blits' row copies split over 3 helper threads
+        // (4.05 -> 1.65 ms a frame).
+        set_default("RSX_ENGINE_PIPE_FAST", "1");
+        set_default("RSX_ENGINE_VS_CONST_USED", "1");
+        set_default("RSX_ENGINE_VS_CONST_DIRECT", "1");
+        set_default("RSX_ENGINE_VS_CONST_REUSE", "1");
+        set_default("RSX_ENGINE_VF_SEG_DIRECT", "1");
+        set_default("RSX_VK_DESC_HASH64", "1");
+        set_default("NV3089_COPY_THREADS", "3");
         default_on_set_switch("GOWA_UNLOCK_FPS");
         set_default("PS3_FRAME_LIMIT", "60");
         set_default("GOWA_LOADER_TPF", "1");
