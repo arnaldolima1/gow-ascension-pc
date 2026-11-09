@@ -49,10 +49,14 @@ if [ -n "$VKD3D_DIR" ]; then
     fi
     vkd3d="-DPS3RECOMP_LIVE_DRAW_VKD3D=ON -DPS3RECOMP_VKD3D_DIR=$VKD3D_DIR"
 fi
+# RSX_VULKAN=1 in .env builds ps3kit's own Vulkan renderer (PS3_RSX=vulkan, on
+# MoltenVK), as build.ps1 does on Windows
+vulkan="-DPS3RECOMP_RSX_VULKAN=OFF"
+[ "${RSX_VULKAN:-}" = 1 ] && vulkan="-DPS3RECOMP_RSX_VULKAN=ON"
 if [ ! -f "$build/build.ninja" ] || [ "${CONFIGURE:-}" = 1 ]; then
     cmake -S "$here" -B "$build" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DPS3RECOMP_DIR="$PS3KIT_DIR" \
         -DPS3RECOMP_FFMPEG_RUNTIME=ON -DPS3RECOMP_FFMPEG_INCLUDE_DIR="${FFMPEG_INCLUDE_DIR:-$(brew --prefix)/include}" \
-        $rpcs3 $vkd3d \
+        $rpcs3 $vkd3d $vulkan \
         > "$logs/configure.log" 2>&1 || { tail -n 20 "$logs/configure.log"; exit 1; }
 fi
 

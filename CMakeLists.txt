@@ -312,7 +312,10 @@ if(SPU_SOURCES)
                 set_source_files_properties("${SPU_LAB_FILE}" PROPERTIES COMPILE_OPTIONS "-O2;-msse4.1${SPU_FMA_FLAG};${SPU_ROUNDING_MATH};${SPU_NOWARN};${ASCENSION_SPU_LAB_FLAGS}")
             endif()
         else()
-            set_source_files_properties(${SPU_SOURCES} PROPERTIES COMPILE_OPTIONS "-O2;${SPU_ROUNDING_MATH};${SPU_NOWARN}")
+            # arm64: no fused multiply-add in the helpers' scalar paths either (the
+            # SPU rounds a*b+c twice; arm64 clang fuses by default), as x86's
+            # -ffp-contract=off with FMA, and as the native code builds
+            set_source_files_properties(${SPU_SOURCES} PROPERTIES COMPILE_OPTIONS "-O2;-ffp-contract=off;${SPU_ROUNDING_MATH};${SPU_NOWARN}")
         endif()
     endif()
 endif()
