@@ -103,6 +103,11 @@
 //                      guest thread writes them through one FILE lock, and
 //                      they cost the main thread several percent of its time.
 //                      Set PS3_VERBOSE=1 to get them back when investigating.
+//   GOWA_UNLOCK_FPS    the game steps by real time (RPCS3's Unlock FPS patch),
+//                      with PS3_FRAME_LIMIT=60; =0 turns it off.
+//   GOWA_LOADER_TPF    the level loader keeps its own time per frame under the
+//                      unlock (else loading took 19 s instead of 4).
+//   GOWA_LOAD_UNPACED  loading-screen frames are not held by the frame limit.
 //   GOWA_GOD_MODE      Kratos takes no damage from hits (the developers' God
 //                      Mode check, never switched on in the retail game).
 //                      TEST DEFAULT, to be turned off before a release: on
@@ -170,6 +175,25 @@ void set_default(const char* name, const char* value)
     SetEnvironmentVariableA("PS3_DEFAULTS_SET", s_set.c_str());
 #else
     setenv("PS3_DEFAULTS_SET", s_set.c_str(), 1);
+#endif
+}
+
+// On by default, for a switch the lifted code tests as "set" (getenv != NULL,
+// tools/ppu_switches.json): a user's NAME=0 is taken off the environment
+// instead, so that 0 turns it off there too. Read without getenv: boot_main's
+// cached getenv keeps the first answer, even "not set", for the whole run.
+static void default_on_set_switch(const char* name)
+{
+#ifdef _WIN32
+    char v[4] = {0};
+    const DWORD n = GetEnvironmentVariableA(name, v, sizeof v);
+    if (!(n == 1 && v[0] == '0')) { set_default(name, "1"); return; }
+    SetEnvironmentVariableA(name, nullptr);
+    _putenv_s(name, "");                 // the CRT's copy as well ("" removes it)
+#else
+    const char* v = getenv(name);
+    if (!v || strcmp(v, "0") != 0) { set_default(name, "1"); return; }
+    unsetenv(name);
 #endif
 }
 
@@ -376,10 +400,21 @@ struct AscensionDefaults {
         // sleeps until an SPU's next write instead of scanning its table again:
         // menu at 8 logical CPUs -1.0 ms a frame, +1.3 fps; first level the same.
         set_default("GOWA_PPU_SCHED_WAIT", "1");
-        // The game measures its frame time with a one-vblank floor (59.94 Hz,
-        // func_002B3C48): correct up to 60 fps, fast above. PS3_FRAME_LIMIT=60
-        // caps it; not a default while the game stays below 60 (menu 42 with
-        // it against 48 without, one run each).
+        // 60 fps (plan L-1, 2026-11-09): the game steps by real time (the
+        // "Unlock FPS" patch, GOWA_UNLOCK_FPS: the user checked walk and fight
+        // speed), capped at 60 (PS3_FRAME_LIMIT; the limiter no longer sleeps a
+        // period every other frame below the cap: fight 24 with or without it).
+        // The unlock had cut the level loader's time per frame from 3.3 ms to
+        // 0.2 ms and the cap starved the loading screen of frames: the sync load
+        // took 19 s (unlock) and 69 s (unlock + cap) against 4.2 s. GOWA_LOADER_TPF
+        // gives the loader its own frame time back (ascension-native
+        // game/loader_gate.cpp, tools/ppu_native_gates.json) and GOWA_LOAD_UNPACED
+        // leaves loading-screen frames unpaced (the game's shell state 0x0083D0D8,
+        // ps3_title_frame_unpaced): 4.5 s with both (logs lgate1-3).
+        default_on_set_switch("GOWA_UNLOCK_FPS");
+        set_default("PS3_FRAME_LIMIT", "60");
+        set_default("GOWA_LOADER_TPF", "1");
+        set_default("GOWA_LOAD_UNPACED", "1");
         set_default("SPU_REJOIN", "204:9700-1C000");
         set_default("SPU_REJOIN_CALL", "1");
         // Off unless asked for: the launcher's "FPS counter" (LD_PERF_OVERLAY=1)

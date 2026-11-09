@@ -1,4 +1,6 @@
 [
   {"addr": "0x002A434C", "gate": "gowa_skel_gate",
-   "note": "the skeleton walk, native with GOWA_SKEL_NATIVE=1 (host/skeleton_native.cpp)"}
+   "note": "the skeleton walk, native with GOWA_SKEL_NATIVE=1 (host/skeleton_native.cpp)"},
+  {"addr": "0x002AE184", "gate": "gowa_loader_tpf_gate",
+   "note": "ticks per frame: the level loader's two callers (lr 0x003CA128, 0x0003CD2C) get the timebase frequency over the target fps (0x0081AF14) instead of the unlock's 1000, with GOWA_LOADER_TPF=1 (ascension-native game/loader_gate.cpp)"}
 ]
