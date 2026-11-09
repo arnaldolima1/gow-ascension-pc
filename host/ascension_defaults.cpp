@@ -430,6 +430,12 @@ struct AscensionDefaults {
         set_default("RSX_ENGINE_VF_SEG_DIRECT", "1");
         set_default("RSX_VK_DESC_HASH64", "1");
         set_default("NV3089_COPY_THREADS", "3");
+        // Module 218's glue and channel callees native (plan B-b, 2026-11-09):
+        // replay lvl218a2 300/300 identical (whole LS and registers), level9 no
+        // difference beyond the known ones of the vertex natives, a fight run
+        // without halt or abort, picture checked.
+        set_default("GOWA_GLUE_NATIVE", "1");
+        set_default("GOWA_CHAN_NATIVE", "1");
         default_on_set_switch("GOWA_UNLOCK_FPS");
         set_default("PS3_FRAME_LIMIT", "60");
         set_default("GOWA_LOADER_TPF", "1");
