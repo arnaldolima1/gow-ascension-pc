@@ -103,6 +103,11 @@
 //                      guest thread writes them through one FILE lock, and
 //                      they cost the main thread several percent of its time.
 //                      Set PS3_VERBOSE=1 to get them back when investigating.
+//   GOWA_GOD_MODE      Kratos takes no damage from hits (the developers' God
+//                      Mode check, never switched on in the retail game).
+//                      TEST DEFAULT, to be turned off before a release: on
+//                      so Kratos survives the fight bench in performance
+//                      runs (asked for on 2026-11-09).
 //
 // The OS environment is used directly, not getenv(): the boot harness routes
 // getenv through a cache that also remembers a miss, so asking first would pin
@@ -388,6 +393,9 @@ struct AscensionDefaults {
         set_default_overlay_font();
         set_default_shader_cache();
         set_default("PS3_VERBOSE", "0");
+        // TEST DEFAULT (2026-11-09): Kratos must not die in the fight bench
+        // during performance runs. Turn it off before a release.
+        set_default("GOWA_GOD_MODE", "1");
         // Five SPU workers instead of the title's six on a host with 8 logical
         // CPUs or fewer: the sixth competes with the PPU and RSX threads for
         // cores (as RPCS3's "Max SPURS threads"). First level at 8 logical
