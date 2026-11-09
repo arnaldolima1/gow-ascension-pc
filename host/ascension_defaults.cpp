@@ -436,6 +436,10 @@ struct AscensionDefaults {
         // without halt or abort, picture checked.
         set_default("GOWA_GLUE_NATIVE", "1");
         set_default("GOWA_CHAN_NATIVE", "1");
+        // and the rest of module 218 that still ran lifted (plan B-c, 2026-11-09:
+        // the output ring allocator 0xC720/0xB700, 0xDBF8, 0xAF38, 0xC4F8):
+        // replay lvl218a2 300/300, level9 nothing new, fight clean, picture checked
+        set_default("GOWA_CHAN2_NATIVE", "1");
         default_on_set_switch("GOWA_UNLOCK_FPS");
         set_default("PS3_FRAME_LIMIT", "60");
         set_default("GOWA_LOADER_TPF", "1");
