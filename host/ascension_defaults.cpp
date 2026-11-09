@@ -411,6 +411,10 @@ struct AscensionDefaults {
         // game/loader_gate.cpp, tools/ppu_native_gates.json) and GOWA_LOAD_UNPACED
         // leaves loading-screen frames unpaced (the game's shell state 0x0083D0D8,
         // ps3_title_frame_unpaced): 4.5 s with both (logs lgate1-3).
+        // Plain FIFO method headers go to the draw engine in one run (ps3kit
+        // 93b0149c, plan A4): walker 16.6 -> 15.1 us a draw in the fight, picture
+        // checked in the menu and the fight (2026-11-09).
+        set_default("RSX_ENGINE_FIFO_FAST", "1");
         default_on_set_switch("GOWA_UNLOCK_FPS");
         set_default("PS3_FRAME_LIMIT", "60");
         set_default("GOWA_LOADER_TPF", "1");
