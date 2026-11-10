@@ -468,6 +468,9 @@ struct AscensionDefaults {
         // over the game and a run started outside the launcher (a test .cmd) got it
         // on screen without being asked.
         set_default("LD_PERF_OVERLAY", "0");
+        // the panel's GDI+ repaint on its own thread, off the walker (plan A4 rest,
+        // 2026-11-10: eng_present 7.2 -> 2.8 % of the walker, panel checked on screen)
+        set_default("LD_PERF_OVERLAY_THREAD", "1");
         // RPCS3's performance overlay in the launcher's style: its Cinzel and
         // palette (text, panel, gold titles).
         set_default("PS3_OVERLAY_COLORS", "#E2B86AFF,#0B090899,#E2B86AFF,#00000000");
