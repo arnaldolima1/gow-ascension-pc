@@ -430,6 +430,15 @@ struct AscensionDefaults {
         set_default("RSX_ENGINE_VF_SEG_DIRECT", "1");
         set_default("RSX_VK_DESC_HASH64", "1");
         set_default("NV3089_COPY_THREADS", "3");
+        // Textures stage (plan A3, 2026-11-10, fight bench, means of 10 windows):
+        // a texture unit resolved through the cache is remembered within the
+        // frame by its raw registers (~1.4 of 2.4 units a draw), and a texture
+        // the game moved in local memory (its allocator moves ~150 a second in
+        // the fight, the same bytes at a new address) keeps its image instead of
+        // a decode + upload: misses 150 -> 6 a second, textures 1.56 -> 0.98 us
+        // a draw; picture checked in three fight shots.
+        set_default("RSX_ENGINE_TEX_MEMO", "1");
+        set_default("RSX_ENGINE_TEX_MOVE", "1");
         // Module 218's glue and channel callees native (plan B-b, 2026-11-09):
         // replay lvl218a2 300/300 identical (whole LS and registers), level9 no
         // difference beyond the known ones of the vertex natives, a fight run
