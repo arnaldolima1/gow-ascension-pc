@@ -444,6 +444,10 @@ struct AscensionDefaults {
         // of it lifted (plan B-d, 2026-11-10; its 0xA588 through its own native):
         // replay m202 256/256 identical, same cycles as before, fight clean, picture checked
         set_default("GOWA_202_NATIVE", "1");
+        // module 210 (RenderJobs) whole from its entry 0x14CF8 (plan B-d/B4, 2026-11-10;
+        // its 0x6A48 through its own native): replay m210 256/256 identical, same
+        // cycles, fight clean, picture checked
+        set_default("GOWA_210_NATIVE", "1");
         default_on_set_switch("GOWA_UNLOCK_FPS");
         set_default("PS3_FRAME_LIMIT", "60");
         set_default("GOWA_LOADER_TPF", "1");
