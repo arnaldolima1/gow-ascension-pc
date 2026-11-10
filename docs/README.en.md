@@ -20,7 +20,7 @@
 Ascension translates the game's code, for the PS3's main processor (PPU) and its SPUs, into C++ and compiles it for your PC, on top of the [ps3recomp](https://github.com/sp00nznet/ps3recomp) runtime. It is not an emulator: it is the game itself, recompiled.
 
 > [!WARNING]
-> **Still experimental, but it can be finished.** [iSamigor](https://github.com/iSamigor) played it from start to finish on their PC (Ryzen 7 9800X3D, RX 9070 XT). On ordinary CPUs the game is still slow (~24 fps in the first level on a Ryzen 7 5700G, 13-21 in the boss fight), and it can still hang. Made for Windows; on macOS (Apple Silicon) it runs again, for testing only so far.
+> **Still experimental, but it can be finished.** [iSamigor](https://github.com/iSamigor) played it from start to finish on their PC (Ryzen 7 9800X3D, RX 9070 XT). On ordinary CPUs the game is still slow (~20 fps in the boss fight on a Ryzen 7 5700G), and it can still hang. Made for Windows; on macOS (Apple Silicon) it runs again, for testing only so far.
 
 > [!IMPORTANT]
 > **No game data is included.** You need your own copy, the **European release `BCES-01741`** (1.00), taken from your disc. Nobody here can give you the game or keys. A fan project, not affiliated with Sony Interactive Entertainment or Santa Monica Studio.
@@ -30,38 +30,41 @@ Ascension translates the game's code, for the PS3's main processor (PPU) and its
 November 2026, on Windows (and on the Mac, for testing):
 
 - **The whole game, from boot to the end:** iSamigor finished it. In our own tests: intro screens, loading, first-use menus, the opening cinematic (picture and sound in sync), the main menu, the first level with Kratos in chains and the first boss fight.
-- **Two renderers:** [RPCS3](https://github.com/RPCS3/rpcs3)'s RSX (Vulkan or OpenGL), which draws the game correctly, and the project's own *live draw* (D3D12).
+- **Renderers:** [RPCS3](https://github.com/RPCS3/rpcs3)'s RSX (Vulkan or OpenGL), which draws the game correctly; the project's own Vulkan renderer, where the performance work is; and *live draw* (D3D12).
 - **A launcher** in English, Portuguese and Spanish, with video (including turning off effects such as depth of field, motion blur and MLAA, still experimental), controls, language, subtitles, improvements and the **online** with your account from the site; **Brazilian Portuguese** voices and text, built on the [site](https://gow-ascension.com.br/en/pt-br) from your own discs.
 
-The November changes are on the [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) branch until they are measured on Windows. No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
+Updated on November 10. The November changes are on the [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) branch until they are measured on Windows. No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
 
 ### Performance
 
-The goal is to run well on ordinary CPUs, not only on strong ones. First level, on a Ryzen 7 5700G (each number measured on Windows, in the same scene):
+The goal is to run well on ordinary CPUs, not only on strong ones. Since November 6 the way is to **leave the PS3 model**: instead of emulating the SPUs and the RSX ever better, their work becomes native PC and GPU code, aiming at no SPU emulation left at all.
 
-| Where | Early November | Now (November 5) | RPCS3 |
-| --- | --- | --- | --- |
-| First level, whole PC (8 cores, 16 threads) | ~21-23 fps | **~24 fps** | 35-40 fps |
-| First level, 4 cores only (8 threads) | ~14-15 fps | **~17-18 fps** | |
-| Main menu | ~50-55 fps | ~50-55 fps | |
-| First boss fight | 13-21 fps | not measured again yet | |
+> [!NOTE]
+> **A measuring mistake fixed (November 9):** our Vulkan renderer's fps counter counted every frame twice (the same frame was presented again ~1 ms later, with nothing drawn). That renderer's numbers published before are worth half. The ones below are real frames.
 
-On a Ryzen 7 9800X3D with an RX 9070 XT (RPCS3's RSX, Vulkan), the game reaches 60 fps outside fights and drops to about half in them.
+The boss fight right after the opening cinematic, the heaviest scene we measure, on a Ryzen 7 5700G (Windows, the project's Vulkan renderer, median of several 5 s windows):
 
-**What paid in November** (each change measured on its own, the game switching it on and off within the same run, on a 4-core PC):
+| When | Fight fps | Video thread, per draw |
+| --- | --- | --- |
+| November 9, night | ~15-17 | ~17.5 µs |
+| November 10, morning | ~18 | ~16.0 µs |
+| November 10, afternoon | **~20** | **~15.0 µs** |
 
-- The main processor's code compiled with a profile of the game's real use (PGO): ~6 ms shorter frames (~10%). Extended to the SPU code and the runtime: ~1 ms more.
-- The game's main thread above normal priority: -2.7 ms a frame.
-- The jobs at the end of the frame spread over up to 4-5 SPUs: -2.1 ms a frame.
-- The RSX thread sleeping on an empty command queue instead of spinning: ~8% shorter; the SPUs picking their next work themselves: ~1.6% shorter.
-- More of the SPUs' geometry module (EDGE) as native code, checked against the original: its heaviest job got 28% faster.
+**What went in from November 6 to 10** (each piece measured, and the picture checked, before it became a default):
 
-**Where the frame goes now:** the RSX is off the critical path on both test PCs (its wait between the geometry's two passes went from 9-12 ms to ~0.1 ms). The frame is now ~55% EDGE (SPU module 218), plus the render jobs at its start and end. Inside EDGE, the biggest waste found is the job manager's interrupts in the middle of each job: they cost as much as the job's own code.
+- **Our own Vulkan renderer** (in ps3kit), where the performance work is: the anti-aliasing the game did on the SPUs (their MLAA no longer runs) is now done on the GPU (SMAA, FXAA or MLAA), anisotropic filtering, vertices converted in batches, and a compact fps counter in the game's colours.
+- **60 fps:** the game's 30 fps cap unlocked, with the game moving at the right speed, and a 60 cap. Loading, which had slowed down with the unlock, is back to ~4.5 s.
+- **SPUs as native code:** three EDGE geometry modules (218, 202 and 210) now run whole as native code, each checked against the original on hundreds of jobs recorded from the game itself (identical results).
+- **A lighter video thread:** 2D copies split over 3 threads (4 → 1.7 ms a frame); shader constants copied only when they change; plain video commands dispatched in blocks (-1.5 µs a draw); and textures: the game moves ~150 textures a second around video memory, and a moved texture now keeps the image already on the GPU instead of being decoded and sent again (textures 1.56 → 1.00 µs a draw).
+- **macOS:** builds and opens the game again (Vulkan on MoltenVK), ~24 fps in the first level on an Apple Silicon Mac; it still hangs on some boots.
 
-**Next:** shrink those interrupts, make the SPUs' list DMA lighter, redo the PGO over the new code and, later, EDGE's culling as native code (its test bench already reproduces the level's 412 recorded calls).
+**Where the frame goes now:** in the fight, the frame is held by the thread that runs the video commands, and its biggest cost is copying the vertices the EDGE jobs have just written (~5 of each draw's ~15 µs, about 50 MB a frame).
+
+**Next steps:** move that geometry to the GPU (positions computed there, no copy on the CPU), which should be the first big jump (an estimate of ~28-32 fps, still to be measured); then the rest of EDGE on the GPU and the other SPU modules as native code.
 
 ### Stability
 
+- **Fixed:** on a slow PC, the video thread gave up a wait after 2 s and dropped the frame's commands; the game then stood still at the level load.
 - **Fixed:** the freeze in the level with the geometry lists waiting forever (a store from the main processor lost in the middle of an SPU's atomic operation: from 3 freezes in 5 runs to none in 4).
 - **Fixed:** the freeze with `CopyLocalMemory offset error` (an Edge Zlib counter, and the texture streaming table swapped without a guard): none in 40 level runs.
 - **Guarded:** corrupted video commands (`FIFO error: possible desync`) no longer kill the RSX thread, and a draw asking for an absurd amount of vertices is skipped instead of crashing the game. The cause of the corruption is still open.

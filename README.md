@@ -20,7 +20,7 @@
 O Ascension traduz o código do jogo, do processador principal (PPU) e dos SPUs do PS3, para C++ e o compila para o seu PC, sobre o runtime do [ps3recomp](https://github.com/sp00nznet/ps3recomp). Não é um emulador: é o próprio jogo, recompilado.
 
 > [!WARNING]
-> **Ainda experimental, mas já dá para zerar.** O [iSamigor](https://github.com/iSamigor) jogou do começo ao fim no PC dele (Ryzen 7 9800X3D, RX 9070 XT). Em processadores comuns o jogo ainda é lento (~24 fps no primeiro nível num Ryzen 7 5700G, 13-21 na luta contra o chefe), e ainda pode travar. Feito para Windows; no macOS (Apple Silicon) ele voltou a rodar, por enquanto só para testes.
+> **Ainda experimental, mas já dá para zerar.** O [iSamigor](https://github.com/iSamigor) jogou do começo ao fim no PC dele (Ryzen 7 9800X3D, RX 9070 XT). Em processadores comuns o jogo ainda é lento (~20 fps na luta contra o chefe num Ryzen 7 5700G), e ainda pode travar. Feito para Windows; no macOS (Apple Silicon) ele voltou a rodar, por enquanto só para testes.
 
 > [!IMPORTANT]
 > **Nenhum dado do jogo está incluído.** Você precisa da sua própria cópia, a **versão europeia `BCES-01741`** (1.00), tirada do seu disco. Ninguém aqui pode te dar o jogo ou chaves. Projeto de fãs, sem ligação com a Sony Interactive Entertainment ou a Santa Monica Studio.
@@ -30,38 +30,41 @@ O Ascension traduz o código do jogo, do processador principal (PPU) e dos SPUs 
 Novembro de 2026, no Windows (e no Mac, em testes):
 
 - **O jogo inteiro, do boot ao fim:** o iSamigor zerou o jogo. Nos nossos testes: telas de abertura, carregamento, menus de primeiro uso, cinemática de abertura (imagem e som sincronizados), menu principal, o primeiro nível com o Kratos acorrentado e a primeira luta contra um chefe.
-- **Dois renderizadores:** o RSX do [RPCS3](https://github.com/RPCS3/rpcs3) (Vulkan ou OpenGL), que desenha o jogo corretamente, e o *live draw* próprio do projeto (D3D12).
+- **Renderizadores:** o RSX do [RPCS3](https://github.com/RPCS3/rpcs3) (Vulkan ou OpenGL), que desenha o jogo corretamente; o renderizador Vulkan próprio do projeto, onde está o trabalho de desempenho; e o *live draw* (D3D12).
 - **Launcher** em português, inglês e espanhol, com vídeo (incluindo desligar efeitos como desfoque de profundidade, motion blur e MLAA, ainda experimental), controles, idioma, legendas, melhorias e o **online** com a sua conta do site; **português do Brasil** com vozes e textos, montado no [site](https://gow-ascension.com.br/pt-br) a partir dos seus discos.
 
-As mudanças de novembro estão no branch [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) até serem medidas no Windows. Ainda não há release. Os marcos estão em [docs/MILESTONES.pt-BR.md](docs/MILESTONES.pt-BR.md) (em inglês: [MILESTONES.md](docs/MILESTONES.md)).
+Atualizado em 10 de novembro. As mudanças de novembro estão no branch [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) até serem medidas no Windows. Ainda não há release. Os marcos estão em [docs/MILESTONES.pt-BR.md](docs/MILESTONES.pt-BR.md) (em inglês: [MILESTONES.md](docs/MILESTONES.md)).
 
 ### Desempenho
 
-O objetivo é rodar bem em processadores comuns, não só nos fortes. Primeiro nível, num Ryzen 7 5700G (cada número medido no Windows, na mesma cena):
+O objetivo é rodar bem em processadores comuns, não só nos fortes. Desde 6 de novembro o caminho é **sair do modelo do PS3**: em vez de emular cada vez melhor as SPUs e o RSX, o trabalho deles vira código nativo do PC e da placa de vídeo, com a meta de não sobrar nenhuma emulação de SPU.
 
-| Onde | Começo de novembro | Hoje (5 de novembro) | RPCS3 |
-| --- | --- | --- | --- |
-| Primeiro nível, PC inteiro (8 núcleos, 16 threads) | ~21-23 fps | **~24 fps** | 35-40 fps |
-| Primeiro nível, só 4 núcleos (8 threads) | ~14-15 fps | **~17-18 fps** | |
-| Menu principal | ~50-55 fps | ~50-55 fps | |
-| Luta contra o chefe | 13-21 fps | ainda não medida de novo | |
+> [!NOTE]
+> **Um erro de medida corrigido (9 de novembro):** o contador de fps do nosso renderizador Vulkan contava cada quadro duas vezes (o mesmo quadro era apresentado de novo ~1 ms depois, sem nada desenhado). Os números desse renderizador publicados antes valem a metade. Os de baixo já são quadros reais.
 
-Num Ryzen 7 9800X3D com uma RX 9070 XT (RSX do RPCS3, Vulkan), o jogo chega a 60 fps fora das lutas e cai para cerca da metade nelas.
+A luta contra o chefe logo depois da cinemática de abertura, a cena mais pesada que medimos, num Ryzen 7 5700G (Windows, renderizador Vulkan do projeto, mediana de várias janelas de 5 s):
 
-**O que rendeu em novembro** (cada mudança medida sozinha, com o jogo alternando entre ligado e desligado na mesma rodada, num PC de 4 núcleos):
+| Quando | fps na luta | Thread de vídeo, por draw |
+| --- | --- | --- |
+| 9 de novembro, à noite | ~15-17 | ~17,5 µs |
+| 10 de novembro, de manhã | ~18 | ~16,0 µs |
+| 10 de novembro, à tarde | **~20** | **~15,0 µs** |
 
-- O código do processador principal compilado com perfil de uso real do jogo (PGO): ~6 ms a menos por quadro (~10%). Estendido ao código das SPUs e ao runtime: ~1 ms a mais.
-- O thread principal do jogo com prioridade acima do normal: -2,7 ms por quadro.
-- Os jobs do fim do quadro espalhados por até 4-5 SPUs: -2,1 ms por quadro.
-- O thread do RSX dormindo quando a fila de comandos está vazia, em vez de girar: ~8% a menos; as SPUs escolhendo sozinhas o próximo trabalho: ~1,6% a menos.
-- Mais partes do módulo de geometria das SPUs (o EDGE) em código nativo, conferidas contra o original: o job mais pesado dele ficou 28% mais rápido.
+**O que entrou de 6 a 10 de novembro** (cada parte medida e com a imagem conferida antes de virar padrão):
 
-**Para onde vai o quadro agora:** o RSX saiu do caminho crítico nos dois PCs de teste (a espera dele entre as duas passadas da geometria caiu de 9-12 ms para ~0,1 ms). Hoje o quadro é ~55% o EDGE (o módulo 218 das SPUs), mais os jobs de renderização no começo e no fim. Dentro do EDGE, o maior desperdício achado são as interrupções do gerenciador de jobs no meio de cada job: custam tanto quanto o código do próprio job.
+- **Renderizador Vulkan próprio** (no ps3kit), onde está o trabalho de desempenho: o anti-aliasing que o jogo fazia nas SPUs (o MLAA delas não roda mais) agora é feito na placa de vídeo (SMAA, FXAA ou MLAA), filtro anisotrópico, vértices convertidos em lotes e um contador de fps compacto nas cores do jogo.
+- **60 fps:** o limite de 30 do jogo destravado, com o jogo andando na velocidade certa, e um limite de 60. Os carregamentos, que tinham ficado lentos com o destrave, voltaram a ~4,5 s.
+- **SPUs em código nativo:** três módulos de geometria do EDGE (218, 202 e 210) rodam inteiros como código nativo, cada um conferido contra o original em centenas de jobs gravados do próprio jogo (resultado idêntico).
+- **Thread de vídeo mais leve:** cópias 2D divididas entre 3 threads (4 → 1,7 ms por quadro); constantes dos shaders copiadas só quando mudam; os comandos de vídeo comuns despachados em bloco (-1,5 µs por draw); e as texturas: o jogo move ~150 texturas por segundo dentro da memória de vídeo, e agora uma textura movida fica com a imagem que já estava na placa em vez de ser decodificada e enviada de novo (texturas de 1,56 para 1,00 µs por draw).
+- **macOS:** voltou a compilar e a abrir o jogo (Vulkan sobre MoltenVK), ~24 fps no primeiro nível num Mac com Apple Silicon; ainda trava em parte das aberturas.
 
-**Próximos passos:** diminuir essas interrupções, deixar mais leve a cópia de dados das SPUs (DMA em lista), refazer o PGO com o código novo e, depois, o culling do EDGE em código nativo (o banco de teste dele já reproduz as 412 chamadas gravadas do nível).
+**Para onde vai o quadro agora:** na luta, quem segura o quadro é o thread que executa os comandos de vídeo, e o maior custo dele é copiar os vértices que os jobs do EDGE acabaram de escrever (~5 dos ~15 µs de cada draw, perto de 50 MB por quadro).
+
+**Próximos passos:** levar essa geometria para a placa de vídeo (as posições calculadas na GPU, sem a cópia no processador), que deve ser o primeiro salto grande (estimativa de ~28-32 fps, ainda a medir); depois o resto do EDGE na GPU e os outros módulos das SPUs em código nativo.
 
 ### Estabilidade
 
+- **Corrigido:** num PC lento, o thread de vídeo desistia de uma espera depois de 2 s e perdia os comandos do quadro; o jogo ficava parado no carregamento do nível.
 - **Corrigido:** o travamento no nível com as listas de geometria esperando para sempre (uma escrita do processador principal se perdia no meio de uma operação atômica de uma SPU: de 3 travamentos em 5 rodadas para nenhum em 4).
 - **Corrigido:** o travamento com `CopyLocalMemory offset error` (um contador do Edge Zlib e a troca da tabela de streaming de texturas sem proteção): nenhum em 40 rodadas no nível.
 - **Protegido:** comandos de vídeo corrompidos (`FIFO error: possible desync`) não derrubam mais o thread do RSX, e um draw pedindo uma quantidade absurda de vértices é descartado em vez de travar o jogo. A causa da corrupção ainda está aberta.
