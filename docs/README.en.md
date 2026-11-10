@@ -17,44 +17,130 @@
 
 ---
 
-Ascension translates the game's code, for the PS3's main processor (PPU) and its SPUs, into C++ and compiles it for your PC, on top of the [ps3recomp](https://github.com/sp00nznet/ps3recomp) runtime. It is not an emulator: it is the game itself, recompiled. A sibling of [Sparta](https://github.com/arnaldolima1/gow-ghost-of-sparta-pc) and [Olympus](https://github.com/arnaldolima1/gow-chains-of-olympus-pc), which do the same for the PSP God of War games.
+Ascension translates the game's code, for the PS3's main processor (PPU) and its SPUs, into C++ and compiles it for your PC, on top of the [ps3recomp](https://github.com/sp00nznet/ps3recomp) runtime. It is not an emulator: it is the game itself, recompiled.
 
 > [!WARNING]
-> **An experiment: not playable from start to finish yet.** The game reaches the first level and the first boss fight, but slowly (~18-23 fps in the level, 13-21 in the fight). Windows only for now (macOS support is paused).
+> **Still experimental, but it can be finished.** [iSamigor](https://github.com/iSamigor) played it from start to finish on their PC (Ryzen 7 9800X3D, RX 9070 XT). On ordinary CPUs the game is still slow (~20 fps in the boss fight on a Ryzen 7 5700G), and it can still hang. Made for Windows; on macOS (Apple Silicon) it runs again, for testing only so far.
 
 > [!IMPORTANT]
 > **No game data is included.** You need your own copy, the **European release `BCES-01741`** (1.00), taken from your disc. Nobody here can give you the game or keys. A fan project, not affiliated with Sony Interactive Entertainment or Santa Monica Studio.
 
 ## Where it is
 
-October 2026, on Windows:
+November 2026, on Windows (and on the Mac, for testing):
 
-- **From boot to the first boss fight:** intro screens, loading, first-use menus, the opening cinematic (picture and sound in sync), the main menu, the first level with Kratos in chains and the first boss fight.
-- **Two renderers:** [RPCS3](https://github.com/RPCS3/rpcs3)'s RSX (Vulkan or OpenGL), which draws the game correctly, and the project's own *live draw* (D3D12).
-- **Performance:** the main menu runs at ~50-55 fps; the first level at ~22-27 fps, depending on the scene (it was ~9); the boss fight at 13-21. Delaying one thread at a time and measuring how much the frame is delayed with it, the limit today is the thread that runs the video commands (RPCS3's RSX) and the game's main thread, not the SPUs or the graphics card. Heavy SPU parts already run as native code, each checked against the original: the per-draw geometry (indices, skinning, normals and tangents) and the post-process that smooths the image's edges. The focus now is making the game lighter for ordinary processors: total CPU use is down ~10% (7.2 to 6.4 cores in the menu) with no fps lost, and the next step is the wait for occlusion queries (ZCULL) on the RSX thread. These numbers are from a Ryzen 5 5600G with an RX 7600; on a Ryzen 7 9800X3D with an RX 9070 XT (RPCS3's RSX, Vulkan), the game reaches 60 fps outside fights and drops to about half in them.
-- **Known issues:** right after the creature fight, near the giant arm, an object of the area is drawn several times, each copy slightly offset (it goes away when the camera leaves); and the game sometimes hangs on an SPU job list that never finishes (`BATCHJOB: Waiting for batch job list ...`).
-- **A launcher** in English, Portuguese and Spanish, with video (including turning off effects such as depth of field, motion blur and MLAA, still experimental), controls, language, subtitles and mods; **Brazilian Portuguese**, voices and text, built from your own US disc.
+- **The whole game, from boot to the end:** iSamigor finished it. In our own tests: intro screens, loading, first-use menus, the opening cinematic (picture and sound in sync), the main menu, the first level with Kratos in chains and the first boss fight.
+- **Renderers:** [RPCS3](https://github.com/RPCS3/rpcs3)'s RSX (Vulkan or OpenGL), which draws the game correctly; the project's own Vulkan renderer, where the performance work is; and *live draw* (D3D12).
+- **A launcher** in English, Portuguese and Spanish, with video (including turning off effects such as depth of field, motion blur and MLAA, still experimental), controls, language, subtitles, improvements and the **online** with your account from the site; **Brazilian Portuguese** voices and text, built on the [site](https://gow-ascension.com.br/en/pt-br) from your own discs.
 
-No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
+Updated on November 10. The November changes are on the [`ascension-perf`](https://github.com/arnaldolima1/gow-ascension-pc/tree/ascension-perf) branch until they are measured on Windows. No release yet. The milestones are in [MILESTONES.md](MILESTONES.md).
+
+### Performance
+
+The goal is to run well on ordinary CPUs, not only on strong ones. Since November 6 the way is to **leave the PS3 model**: instead of emulating the SPUs and the RSX ever better, their work becomes native PC and GPU code, aiming at no SPU emulation left at all.
+
+> [!NOTE]
+> **A measuring mistake fixed (November 9):** our Vulkan renderer's fps counter counted every frame twice (the same frame was presented again ~1 ms later, with nothing drawn). That renderer's numbers published before are worth half. The ones below are real frames.
+
+The boss fight right after the opening cinematic, the heaviest scene we measure, on a Ryzen 7 5700G (Windows, the project's Vulkan renderer, median of several 5 s windows):
+
+| When | Fight fps | Video thread, per draw |
+| --- | --- | --- |
+| November 9, night | ~15-17 | ~17.5 µs |
+| November 10, morning | ~18 | ~16.0 µs |
+| November 10, afternoon | **~20** | **~15.0 µs** |
+
+**What went in from November 6 to 10** (each piece measured, and the picture checked, before it became a default):
+
+- **Our own Vulkan renderer** (in ps3kit), where the performance work is: the anti-aliasing the game did on the SPUs (their MLAA no longer runs) is now done on the GPU (SMAA, FXAA or MLAA), anisotropic filtering, vertices converted in batches, and a compact fps counter in the game's colours.
+- **60 fps:** the game's 30 fps cap unlocked, with the game moving at the right speed, and a 60 cap. Loading, which had slowed down with the unlock, is back to ~4.5 s.
+- **SPUs as native code:** three EDGE geometry modules (218, 202 and 210) now run whole as native code, each checked against the original on hundreds of jobs recorded from the game itself (identical results).
+- **A lighter video thread:** 2D copies split over 3 threads (4 → 1.7 ms a frame); shader constants copied only when they change; plain video commands dispatched in blocks (-1.5 µs a draw); and textures: the game moves ~150 textures a second around video memory, and a moved texture now keeps the image already on the GPU instead of being decoded and sent again (textures 1.56 → 1.00 µs a draw).
+- **macOS:** builds and opens the game again (Vulkan on MoltenVK), ~24 fps in the first level on an Apple Silicon Mac; it still hangs on some boots.
+
+**Where the frame goes now:** in the fight, the frame is held by the thread that runs the video commands, and its biggest cost is copying the vertices the EDGE jobs have just written (~5 of each draw's ~15 µs, about 50 MB a frame).
+
+**Next steps:** move that geometry to the GPU (positions computed there, no copy on the CPU), which should be the first big jump (an estimate of ~28-32 fps, still to be measured); then the rest of EDGE on the GPU and the other SPU modules as native code.
+
+### Stability
+
+- **Fixed:** on a slow PC, the video thread gave up a wait after 2 s and dropped the frame's commands; the game then stood still at the level load.
+- **Fixed:** the freeze in the level with the geometry lists waiting forever (a store from the main processor lost in the middle of an SPU's atomic operation: from 3 freezes in 5 runs to none in 4).
+- **Fixed:** the freeze with `CopyLocalMemory offset error` (an Edge Zlib counter, and the texture streaming table swapped without a guard): none in 40 level runs.
+- **Guarded:** corrupted video commands (`FIFO error: possible desync`) no longer kill the RSX thread, and a draw asking for an absurd amount of vertices is skipped instead of crashing the game. The cause of the corruption is still open.
+- **Known issues:** right after the creature fight, near the giant arm, an object of the area is drawn several times, each copy slightly offset (it goes away when the camera leaves); the game sometimes hangs on an SPU job list that never finishes (`BATCHJOB: Waiting for batch job list ...`); and twice a silent crash came ~70-105 s into the level.
+
+### Online multiplayer (in development)
+
+The game's original servers still work for players on a PS3, but the recompiled game does not sign in to PSN. So the project has its own server (in Rust, still private), live at [gow-ascension.com.br](https://gow-ascension.com.br) with sign-up closed for now; the runtime sends it the names the game looks for. The server never poses as Sony: it answers only what the game expects, read from the translated code or from captures of the game itself talking to it. The match uses the game's own netcode (a P2P mesh over UDP); since two players at home can hardly ever reach each other directly (each behind their router), the packets go through a relay on the server, and the game does not notice.
+
+| Step | State |
+| --- | --- |
+| Going online, Online Pass | ok |
+| Online configuration (the game reads ours) | ok |
+| Terms of use, multiplayer profile kept on the account | ok |
+| Tutorial skipped, warrior lobby | ok |
+| Quick match: the player's location | ok |
+| Quick match: picking the matchmaking server | ok |
+| Connecting to matchmaking (SSL 3.0 session) | ok |
+| Two players matched into one game, one of them host | ok (two games on one PC) |
+| The match's network through the server's relay | ok (two games on one PC) |
+| Launcher: signing in and playing online | ok |
+| A match between two PCs over the internet | **in progress** |
+| The whole match, from the lobby to the end | to do |
+
+```mermaid
+flowchart LR
+  subgraph PC["Player's PC"]
+    L["Launcher<br/>account and online"]
+    G["Recompiled game<br/>(ps3kit runtime)"]
+    L -- "address, configuration and profile" --> G
+  end
+
+  subgraph SRV["Project server (Rust)"]
+    API["Accounts and API"]
+    CFG["Online configuration"]
+    TUS["Multiplayer profile<br/>per account"]
+    GEO["Location"]
+    SAM["Matchmaking<br/>(SSL 3.0)"]
+    REL["Signaling and relay<br/>(UDP)"]
+    DB[("PostgreSQL")]
+    TUS --> DB
+    API --> DB
+  end
+
+  WEB["Project site<br/>profile, ranking, panel"]
+  G2["Another player's game"]
+
+  L -- "sign-in by code" --> API
+  L -- "configuration, profile" --> CFG
+  L -- "profile" --> TUS
+  G -- "TCP" --> GEO
+  G -- "TCP + SSL" --> SAM
+  G <-- "match (UDP)" --> REL
+  REL <-- "match (UDP)" --> G2
+  WEB -- "HTTP" --> API
+```
+
+Live on the server and the site: accounts, the multiplayer profile kept per account, the public profile with level and achievements, the ranking (empty until there are matches), an admin panel and the launcher's sign-in by code. Planned: the game's trophies signed and checked by the server. **"Play offline" will always keep working**: the campaign will never ask for an account.
 
 ## Playing
 
-The launcher installs the game from **your** disc and compiles it on your computer. It comes from the [releases](https://github.com/arnaldolima1/gow-ascension-pc/releases) as `AscensionLauncher_<version>_x64-setup.exe` and updates itself when a new version is out; it has no release yet (until then, build as below).
+With the game built (below), install the launcher with `AscensionLauncher_<version>_x64-setup.exe` from the [releases](https://github.com/arnaldolima1/gow-ascension-pc/releases) and, the first time, choose the `ascension` folder under **Advanced › Game folder**. It updates itself when a new version is out.
 
 <p align="center"><img src="images/launcher/launcher-home.en.jpg" alt="The Ascension launcher" width="760"></p>
 
-PLAY opens the game in its own window (on Windows, optionally inside the launcher's).
+PLAY starts the game; the launcher hides until it closes.
 
-- **Installation:** choose the folder, the European `.iso` and your key file (or an `EBOOT.ELF` RPCS3 decrypted); the launcher checks the disc, decrypts, translates and compiles the game, showing each step. The image stays where it is and is mounted read-only when you play.
-- **Video:** renderer (RPCS3 Vulkan or OpenGL), internal resolution, anisotropic filtering, window or full screen (F11 or Alt+Enter also toggle in game), window size, aspect ratio, image scaling, VSync, FPS counter.
+- **Video:** renderer (RPCS3 Vulkan or OpenGL, live draw), internal resolution and anisotropic filtering (RPCS3), window or full screen (F11 or Alt+Enter also toggle in game), window size, aspect ratio, image scaling, VSync, FPS counter.
 - **Controls:** tabs for keyboard and mouse (two keys per control: click one and press the new key) and for the controller (which button does what, dead zone). Default: WASD walks, the arrows evade, Space/J/I/L or the mouse for the face buttons, Shift blocks, Esc or Enter pauses. Keyboard, mouse and controller all work at once.
 - **Launcher** in several languages; Automatic follows the game's language.
 - **Game:** language (English, Portuguese, Spanish, French, German, Italian, Russian, Polish, Turkish) and subtitles, which hold after the first start too; automatic save backups.
-- **Mods:** turn them on and off, and order them. **Skip intro** comes with it (straight to the loading screen, no intro screens); **Create PT-BR mod** builds Brazilian Portuguese from your US disc image. The included mods are recipes the launcher applies to your own disc's files; none carries anything from the game.
+- **Improvements:** turn them on and off. **Skip intro** comes with it (straight to the loading screen, no intro screens); **Open the improvements folder** is where the others go, such as **Brazilian Portuguese**, which the [site's page](https://gow-ascension.com.br/en/pt-br) builds in your browser from your own disc images (nothing is uploaded). The included improvements are recipes: the launcher applies them to your disc's files, carrying nothing from the game.
+- **Online:** signs in to your account from the site with a code (as on a TV) and turns the online on; the game's trophies are on the same tab.
 
 <p align="center"><img src="images/launcher/launcher-controls.en.jpg" alt="The controls page" width="760"></p>
 
-<p align="center"><img src="images/launcher/launcher-mods.en.jpg" alt="The mods page" width="760"></p>
 
 ## Building
 

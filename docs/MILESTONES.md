@@ -1,6 +1,6 @@
 # Milestones
 
-What the game could do, and when.
+What the game could do, and when. Brazilian Portuguese: [MILESTONES.pt-BR.md](MILESTONES.pt-BR.md); a new row goes in both files.
 
 | Date | Milestone |
 | --- | --- |
@@ -33,3 +33,16 @@ What the game could do, and when.
 | 2026-10-23 | Level ~17.5 → ~22 fps: lifted SPU code built for AVX2, lighter SPU runtime. |
 | 2026-10-23 | **The frame's edge-smoothing post-process runs natively:** its four heaviest SPU stages rewritten in C, identical to the original on 12 million checked calls; that work costs about half. |
 | 2026-10-23 | **First boss fight reached** (13-21 fps while fighting). The profile there shows the SPU time spread over many small pieces, so the next work goes after costs every SPU job pays, not one function at a time. |
+| 2026-11-03 | Measured on Windows against RPCS3 in the same first-level scene: 22 fps native, 35-40 on RPCS3. Two changes become the default: the RSX thread sleeps on an empty command queue instead of spinning (~8% shorter frames on a 4-core PC), and the SPUs pick their next work themselves (~1.6% shorter on the same PC). |
+| 2026-11-03 | **The intermittent level freeze found and fixed:** a store from the main processor could be lost in the middle of an SPU's atomic operation, leaving the geometry lists waiting forever. The repro went from 3 freezes in 5 runs to none in 4. |
+| 2026-11-04 | The first level's frame measured part by part: of ~50 ms, ~21 ms are the SPUs' geometry lists (EDGE) and ~9-12 ms the wait for the RSX thread between that geometry's two passes. |
+| 2026-11-04 | **Runs on macOS again** (Apple Silicon, RPCS3's RSX), for testing: the RSX thread now recovers from corrupted command data instead of stopping the game. |
+| 2026-11-04 | **Multiplayer reaches the warrior lobby** with the project's own server (in development, still private); the player's multiplayer profile is kept on their account. Online matches do not work yet. |
+| 2026-11-04 | Two more defaults, each measured in-run on a 4-core PC: the game's main thread above normal priority (-2.7 ms a frame) and the frame's tail jobs spread over up to 4-5 SPUs (-2.1 ms). The main processor's code built with profile-guided optimization (PGO): ~10% shorter frames. |
+| 2026-11-05 | **The `CopyLocalMemory offset error` freeze fixed:** an Edge Zlib counter, and a guard on the texture streaming table's hand-off. None in 40 level runs on 4 cores. |
+| 2026-11-05 | **The RSX off the critical path:** its wait between EDGE's two geometry passes went from 9-12 ms to ~0.1 ms. The first level runs at ~24 fps on the whole PC and ~17-18 on 4 cores (was ~14-15); the frame is now ~55% SPU module 218, where the job manager's interrupts cost as much as the jobs' own code. |
+| 2026-11-05 | Multiplayer: quick match gets past the player's location and picks its matchmaking server on the project's own server; the game connects and opens an SSL 3.0 session, which the server is learning to answer. |
+| 2026-11-06 | **The project leaves the PS3 model:** the SPUs' and the RSX's work becomes native PC and GPU code, aiming at no SPU emulation at all. The project's own Vulkan renderer becomes the focus of the performance work. |
+| 2026-11-08 | The anti-aliasing the game did on the SPUs (MLAA) moves to the GPU (SMAA, FXAA or MLAA); anisotropic filtering; a compact fps counter in the game's colours. |
+| 2026-11-09 | **60 fps:** the game's 30 fps cap unlocked, at the right speed, with a 60 cap and loading back to ~4.5 s. A measuring mistake found and fixed: the Vulkan renderer's fps counter counted every frame twice (the fight runs at ~15-17 real fps, not ~30). |
+| 2026-11-10 | **Three SPU geometry modules (218, 202 and 210) whole as native code**, checked against the original on hundreds of recorded jobs. A lighter video thread (2D copies over 3 threads, commands in blocks, textures the game moves reused): the fight now runs at ~20 fps on a Ryzen 7 5700G. |
