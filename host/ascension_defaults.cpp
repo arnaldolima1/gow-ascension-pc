@@ -440,6 +440,10 @@ struct AscensionDefaults {
         // the output ring allocator 0xC720/0xB700, 0xDBF8, 0xAF38, 0xC4F8):
         // replay lvl218a2 300/300, level9 nothing new, fight clean, picture checked
         set_default("GOWA_CHAN2_NATIVE", "1");
+        // module 202 (skeleton animation) whole from its entry 0xBF60, no function
+        // of it lifted (plan B-d, 2026-11-10; its 0xA588 through its own native):
+        // replay m202 256/256 identical, same cycles as before, fight clean, picture checked
+        set_default("GOWA_202_NATIVE", "1");
         default_on_set_switch("GOWA_UNLOCK_FPS");
         set_default("PS3_FRAME_LIMIT", "60");
         set_default("GOWA_LOADER_TPF", "1");
