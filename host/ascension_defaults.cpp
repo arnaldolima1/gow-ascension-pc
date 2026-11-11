@@ -209,7 +209,15 @@ struct AscensionDefaults {
         // (2026-11-08, wsites / wsites-mirror runs).
         {
             const char* r = getenv("PS3_RSX");
-            if (r && !strcmp(r, "vulkan")) set_default("RSX_ENGINE_GPU_MIRROR", "1");
+            if (r && !strcmp(r, "vulkan")) {
+                set_default("RSX_ENGINE_GPU_MIRROR", "1");
+                // The post-process round on a frame nothing shows any more: its tasks
+                // keep their barriers and signals but move no pixels and skip the two
+                // stages that read them (plan 5.1 (c), 2026-11-10: round 7.5 -> 3 ms,
+                // lighter stretches ~55 -> ~60 fps). 0xA4F0 still hands the GPU K and T.
+                set_default("RSX_ENGINE_GPU_MIRROR_NODMA", "1");
+                set_default("GOWA_POST_SKIP", "9E60,A4F0");
+            }
         }
         set_default("LD_SWIN", "0");
         set_default("GCM_PARK_WAIT_MS", "600000");
