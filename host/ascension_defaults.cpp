@@ -482,6 +482,11 @@ struct AscensionDefaults {
         set_default("RSX_ENGINE_GPU_VFETCH", "2");
         set_default("RSX_VK_GUEST_IMPORT", "70000000-7B000000");
         set_default("RSX_VK_CHUNK_DRAWS", "32");
+        // Off the PPU main thread (2026-11-10, fight 21.9 -> 22.5 fps): the profiler's
+        // caller lookup on every syscall answered from a cache, and a task's host
+        // thread kept for the next task (~200 CreateThread a second, 100 us each).
+        set_default("PPU_RESOLVE_CACHE", "1");
+        set_default("SPU_ASYNC_POOL", "1");
         set_default("LD_PERF_OVERLAY", "0");
         // the panel's GDI+ repaint on its own thread, off the walker (plan A4 rest,
         // 2026-11-10: eng_present 7.2 -> 2.8 % of the walker, panel checked on screen)
