@@ -475,9 +475,12 @@ struct AscensionDefaults {
         // still turns the corner panel on. The default is off because it is drawn
         // over the game and a run started outside the launcher (a test .cmd) got it
         // on screen without being asked.
-        // The vertex fetch stays on the CPU: on the GPU (RSX_ENGINE_GPU_VFETCH, with
-        // RSX_VK_ASYNC_COMPUTE) screen-aligned bands appear on the floor in about one
-        // load in six, for no gain in the first level (plan A7, 2026-11-11).
+        // Vertex fetch on the GPU from copies, its compute on a second queue (plan A7,
+        // 2026-11-11 night: fight 19.7 -> 21.1 fps, test checkpoint 19-20 -> 23-24).
+        // No guest import: reading in place needs the rings' releases held, and held
+        // releases are what left bands on the floor (with every draw on the CPU too).
+        set_default("RSX_ENGINE_GPU_VFETCH", "2");
+        set_default("RSX_VK_ASYNC_COMPUTE", "1");
         set_default("RSX_VK_CHUNK_DRAWS", "32");
         // Off the PPU main thread (2026-11-10, fight 21.9 -> 22.5 fps): the profiler's
         // caller lookup on every syscall answered from a cache, and a task's host
