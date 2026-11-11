@@ -475,12 +475,9 @@ struct AscensionDefaults {
         // still turns the corner panel on. The default is off because it is drawn
         // over the game and a run started outside the launcher (a test .cmd) got it
         // on screen without being asked.
-        // Vertex fetch on the GPU, reading the guest's memory where it lies (plan A7,
-        // 2026-11-10: walker 15.7 -> 11.0 us a draw, fight 18.7 -> 21 fps). The window
-        // holds the EDGE rings and the streams the fight draws from. Mode 2: only where
-        // the import works; without it the CPU fetch stays, which beats copying.
-        set_default("RSX_ENGINE_GPU_VFETCH", "2");
-        set_default("RSX_VK_GUEST_IMPORT", "70000000-7B000000");
+        // The vertex fetch stays on the CPU: on the GPU (RSX_ENGINE_GPU_VFETCH, with
+        // RSX_VK_ASYNC_COMPUTE) screen-aligned bands appear on the floor in about one
+        // load in six, for no gain in the first level (plan A7, 2026-11-11).
         set_default("RSX_VK_CHUNK_DRAWS", "32");
         // Off the PPU main thread (2026-11-10, fight 21.9 -> 22.5 fps): the profiler's
         // caller lookup on every syscall answered from a cache, and a task's host
