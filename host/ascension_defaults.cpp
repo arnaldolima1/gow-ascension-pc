@@ -521,6 +521,9 @@ struct AscensionDefaults {
         }
         set_default("PS3RECOMP_SPIRV_CACHE", parts[2].c_str());
         set_default("PS3RECOMP_VK_PIPELINE_CACHE", (parts[1] + "/pipelines.bin").c_str());
+        // What the last runs drew, built before the first draw (plan A5, 2026-11-10:
+        // new pipelines during a run 2850 -> 213, picture checked).
+        set_default("RSX_ENGINE_PIPELINE_MANIFEST", (parts[1] + "/pipelines.manifest").c_str());
     }
 
     // launcher/Cinzel-Black.ttf beside a build in build/<platform>/ (the
